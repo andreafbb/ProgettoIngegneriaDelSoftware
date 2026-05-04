@@ -26,5 +26,7 @@ JavaProject/
 ```
 
 ## Team
-> [!TIP]
-> Inserire qui i nominativi dei membri del team e, se utile, i ruoli principali.
+Sviluppato da:
+- Andrea Francesco Bruno
+- Gaspare Tortora
+- Luciano Meccariello
