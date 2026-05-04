@@ -1,21 +1,30 @@
-# 📚 Sistema di Registro Elettronico di Classe
+# Sistema di Registro Elettronico di Classe
 
-## 📖 Descrizione
-Questo progetto consiste nello sviluppo di un sistema software per la gestione di un registro elettronico di classe.
+## Descrizione
+Sistema software per la gestione di un **registro elettronico di classe**.
 
-## 🎯 Obiettivo
-Gestire lezioni, compiti e valutazioni per docenti e studenti tramite una piattaforma web.
+> [!NOTE]
+> Il progetto copre gestione di lezioni, compiti e valutazioni tramite piattaforma web.
 
-## ⚙️ Tecnologie
-- Java
-- Database relazionale
-- UML (Visual Paradigm)
-- Git/GitHub
+## Obiettivo
+Fornire strumenti a docenti e studenti per:
+- gestione lezioni;
+- assegnazione e monitoraggio compiti;
+- registrazione e consultazione valutazioni.
 
-## 📂 Struttura
-/Documentation
-/VisualParadigm
-/JavaProject
+## Stack Tecnologico
+- `Java`
+- `Database relazionale`
+- `UML` con `Visual Paradigm`
+- `Git` / `GitHub`
 
-## 👨‍💻 Team
-[Inserire nomi]
+## Struttura del Repository
+```text
+Documentation/
+VisualParadigm/
+JavaProject/
+```
+
+## Team
+> [!TIP]
+> Inserire qui i nominativi dei membri del team e, se utile, i ruoli principali.

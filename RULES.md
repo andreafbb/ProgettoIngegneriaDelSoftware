@@ -1,35 +1,42 @@
-# 📏 RULES.md – Linee Guida del Progetto
+# RULES.md - Linee Guida del Progetto
 
-## 🌱 Workflow
+## Workflow
+> [!WARNING]
+> **Non lavorare direttamente su `main`.**
 
-NON lavorare su main.
-
-### Creazione branch
+### Creazione Branch
+```bash
 git checkout -b feature/nome-feature
+```
 
-## 🔁 Pull Request (PASSAGGI COMPLETI)
+## Pull Request (Passaggi Completi)
+1. Crea il branch:
+   ```bash
+   git checkout -b feature/nome-feature
+   ```
+2. Aggiungi le modifiche:
+   ```bash
+   git add .
+   ```
+3. Crea il commit:
+   ```bash
+   git commit -m "feat: descrizione modifica"
+   ```
+4. Esegui il push:
+   ```bash
+   git push origin feature/nome-feature
+   ```
+5. Vai su GitHub e clicca su **Compare & pull request**.
 
-1. Crea branch:
-git checkout -b feature/nome-feature
+## Review
+- Almeno **1 approvazione** obbligatoria.
+- **Vietata** l'auto-approvazione.
 
-2. Aggiungi modifiche:
-git add .
+## Vietato
+> [!CAUTION]
+> - Push diretto su `main`
+> - Commit senza significato
 
-3. Commit:
-git commit -m "feat: descrizione modifica"
-
-4. Push:
-git push origin feature/nome-feature
-
-5. Vai su GitHub e clicca "Compare & pull request"
-
-## 👀 Review
-- Almeno 1 approvazione
-- Non auto-approvare
-
-## 🚫 Vietato
-- push diretto su main
-- commit senza senso
-
-## 🎯 Regola base
-Se non sei sicuro → chiedi
+## Regola Base
+> [!TIP]
+> Se non sei sicuro, chiedi prima di procedere.
