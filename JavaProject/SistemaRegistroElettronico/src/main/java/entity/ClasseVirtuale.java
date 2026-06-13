@@ -1,48 +1,83 @@
 package entity;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class ClasseVirtuale {
 
-	private long id;
+	private Long id;
 	private String nome;
 
-	public void aggiungiLezione() {
-		// TODO - implement entity.ClasseVirtuale.aggiungiLezione
-		throw new UnsupportedOperationException();aggiungiLezioneClasseVirtualeaggiungiLezione
+	private Docente docenteReferente;
+	private List<Studente> studentiIscritti = new ArrayList<>();
+
+	/*
+	Liste degli elementi da aggiornare nel registro
+	 */
+	private List<Lezione> lezioni = new ArrayList<>();
+	private List<Compito> compiti = new ArrayList<>();
+	private List<Valutazione> valutazioni = new ArrayList<>();
+
+	public ClasseVirtuale () {}
+
+	public ClasseVirtuale(Long id, Docente d, String nome){
+		this.id = id;
+		this.docenteReferente = d;
+		this.nome = nome;
 	}
 
-	public void aggiungiCompito() {
-		// TODO - implement entity.ClasseVirtuale.aggiungiCompito
-		throw new UnsupportedOperationException();aggiungiCompitoClasseVirtualeaggiungiCompito
+	/*
+	Uso una guardia per mantenere la coerenza tra le due liste
+	 */
+	public void aggiungiStudente(Studente s) {
+		if (this.studentiIscritti.contains(s)) return;
+		this.studentiIscritti.add(s);
+		s.aggiungiClasse(this);
+	}
+
+	public void aggiungiLezione(Lezione l) {
+		this.lezioni.add(l);
+	}
+
+	public void aggiungiCompito(Compito c) {
+		this.compiti.add(c);
+	}
+
+	public void aggiungiValutazione(Valutazione v) {
+		this.valutazioni.add(v);
 	}
 
 	public void cercaStudente() {
 		// TODO - implement entity.ClasseVirtuale.cercaStudente
-		throw new UnsupportedOperationException();cercaStudenteClasseVirtualecercaStudente
+		throw new UnsupportedOperationException();
 	}
 
-	public void aggiungiValutazione() {
-		// TODO - implement entity.ClasseVirtuale.aggiungiValutazione
-		throw new UnsupportedOperationException();aggiungiValutazioneClasseVirtualeaggiungiValutazione
+	public List<Compito> getElencoCompiti() {
+		return new ArrayList<>(this.compiti);
 	}
 
-	public void getElencoCompiti() {
-		// TODO - implement entity.ClasseVirtuale.getElencoCompiti
-		throw new UnsupportedOperationException();getElencoCompitiClasseVirtualegetElencoCompiti
+	public List<Lezione> getElencoLezioni() {
+		return new ArrayList<>(this.lezioni);
 	}
 
-	public void getElencoLezioni() {
-		// TODO - implement entity.ClasseVirtuale.getElencoLezioni
-		throw new UnsupportedOperationException();getElencoLezioniClasseVirtualegetElencoLezioni
+	/*
+	Fa una ricerca filtrata solo sullo Studente passato in input
+	 */
+	public List<Valutazione> getValutazioniStudente(Studente s) {
+
+		List<Valutazione> valutazioniStudente = new ArrayList<>();
+
+		for (Valutazione valutazione : valutazioni){
+			if(valutazione.getStudenteValutato().equals(s)){
+				valutazioniStudente.add(valutazione);
+			}
+		}
+
+		return  valutazioniStudente;
 	}
 
-	public void getValutazioniStudente() {
-		// TODO - implement entity.ClasseVirtuale.getValutazioniStudente
-		throw new UnsupportedOperationException();getValutazioniStudenteClasseVirtualegetValutazioniStudente
-	}
-
-	public void getValutazioniClasse() {
-		// TODO - implement entity.ClasseVirtuale.getValutazioniClasse
-		throw new UnsupportedOperationException();getValutazioniClasseClasseVirtualegetValutazioniClasse
+	public List<Valutazione> getValutazioniClasse() {
+		return new ArrayList<>(this.valutazioni);
 	}
 
 }
