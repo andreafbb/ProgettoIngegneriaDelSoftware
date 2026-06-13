@@ -25,7 +25,7 @@ JavaProject/
 
 ## Attenzione
 
-Per poter accedere correttamente allo schema nel databse MySQL, è necessario inserire la password nel template persistence.xml.template, richiedendola al Team Leader.
+Per poter accedere correttamente allo schema nel databse MySQL, è necessario inserire la password nel template persistence.xml.template, del proprio server MySQL.
 
 ## Team
 Sviluppato da:
