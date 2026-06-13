@@ -1,24 +1,24 @@
-package controller;
+package entity;
 
 public class GestoreVisualizzazione {
 
 	public void calcolaMediaStudente() {
-		// TODO - implement controller.GestoreVisualizzazione.calcolaMediaStudente
+		// TODO - implement entity.GestoreVisualizzazione.calcolaMediaStudente
 		throw new UnsupportedOperationException();calcolaMediaStudenteGestoreVisualizzazionecalcolaMediaStudente
 	}
 
 	public void visualizzaLezioni() {
-		// TODO - implement controller.GestoreVisualizzazione.visualizzaLezioni
+		// TODO - implement entity.GestoreVisualizzazione.visualizzaLezioni
 		throw new UnsupportedOperationException();visualizzaLezioniGestoreVisualizzazionevisualizzaLezioni
 	}
 
 	public void visualizzaCompiti() {
-		// TODO - implement controller.GestoreVisualizzazione.visualizzaCompiti
+		// TODO - implement entity.GestoreVisualizzazione.visualizzaCompiti
 		throw new UnsupportedOperationException();visualizzaCompitiGestoreVisualizzazionevisualizzaCompiti
 	}
 
 	public void visualizzaValutazioni() {
-		// TODO - implement controller.GestoreVisualizzazione.visualizzaValutazioni
+		// TODO - implement entity.GestoreVisualizzazione.visualizzaValutazioni
 		throw new UnsupportedOperationException();visualizzaValutazioniGestoreVisualizzazionevisualizzaValutazioni
 	}
 

@@ -1,34 +1,34 @@
-package controller;
+package entity;
 
 public class GestoreRegistroDocente {
 
 	public void registraLezione() {
-		// TODO - implement controller.GestoreRegistroDocente.registraLezione
+		// TODO - implement entity.GestoreRegistroDocente.registraLezione
 		throw new UnsupportedOperationException();registraLezioneGestoreRegistroDocenteregistraLezione
 	}
 
 	public void registraCompito() {
-		// TODO - implement controller.GestoreRegistroDocente.registraCompito
+		// TODO - implement entity.GestoreRegistroDocente.registraCompito
 		throw new UnsupportedOperationException();registraCompitoGestoreRegistroDocenteregistraCompito
 	}
 
 	public void registraValutazione() {
-		// TODO - implement controller.GestoreRegistroDocente.registraValutazione
+		// TODO - implement entity.GestoreRegistroDocente.registraValutazione
 		throw new UnsupportedOperationException();registraValutazioneGestoreRegistroDocenteregistraValutazione
 	}
 
 	public void mostraRegistro() {
-		// TODO - implement controller.GestoreRegistroDocente.mostraRegistro
+		// TODO - implement entity.GestoreRegistroDocente.mostraRegistro
 		throw new UnsupportedOperationException();mostraRegistroGestoreRegistroDocentemostraRegistro
 	}
 
 	public void monitoraAndamento() {
-		// TODO - implement controller.GestoreRegistroDocente.monitoraAndamento
+		// TODO - implement entity.GestoreRegistroDocente.monitoraAndamento
 		throw new UnsupportedOperationException();monitoraAndamentoGestoreRegistroDocentemonitoraAndamento
 	}
 
 	public void calcolaMediaClasse() {
-		// TODO - implement controller.GestoreRegistroDocente.calcolaMediaClasse
+		// TODO - implement entity.GestoreRegistroDocente.calcolaMediaClasse
 		throw new UnsupportedOperationException();calcolaMediaClasseGestoreRegistroDocentecalcolaMediaClasse
 	}
 
