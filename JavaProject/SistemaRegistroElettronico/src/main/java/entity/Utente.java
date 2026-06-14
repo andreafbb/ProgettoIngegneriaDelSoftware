@@ -1,6 +1,21 @@
 package entity;
 
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.MappedSuperclass;
+
+/*
+Utilizziamo l'approccio Table_per_class, cioè nel database andiamo
+a creare una tabella per ogni sottoclasse, quindi Docente e Studente
+avranno tabelle, mentre Utente no
+ */
+@MappedSuperclass
 public abstract class Utente {
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
 	private String nome;
 	private String email;

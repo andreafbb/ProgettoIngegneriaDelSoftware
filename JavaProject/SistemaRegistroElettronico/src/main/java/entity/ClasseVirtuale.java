@@ -1,14 +1,24 @@
 package entity;
 
+import jakarta.persistence.*;
+
 import java.util.ArrayList;
 import java.util.List;
 
+@Entity
 public class ClasseVirtuale {
 
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
+
 	private String nome;
 
+	@ManyToOne
+	@JoinColumn(name = "docente_id")
 	private Docente docenteReferente;
+
+	@ManyToMany(mappedBy = "studenti")
 	private List<Studente> studentiIscritti = new ArrayList<>();
 
 	/*

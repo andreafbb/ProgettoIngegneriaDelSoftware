@@ -1,10 +1,31 @@
 package entity;
 
+import jakarta.persistence.Entity;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
+
 import java.util.ArrayList;
 import java.util.List;
 
+@Entity
 public class Studente extends Utente {
+	/*
+	Niente Id perché e già presente in Utente
+	 */
 
+	/*
+	Creo una tabella associativa "iscrizione" che andrebbe creata anche nel modello di dominio
+	e nelle entità, ma dato che in implementazione non verranno trattati i
+	casi d'uso relativi all'iscrizione di uno studente è irrilevante a livello
+	di Entity, ma nelle tabelle bisogna inserirla
+	 */
+	@ManyToMany
+	@JoinTable(
+			name = "iscrizione",
+			joinColumns = @JoinColumn(name = "studente_id"),
+			inverseJoinColumns = @JoinColumn(name = "classevirtuale_id")
+	)
 	private List<ClasseVirtuale> classi = new ArrayList<>();
 
 	protected Studente() {super();}
@@ -31,4 +52,19 @@ public class Studente extends Utente {
 		throw new UnsupportedOperationException();
 	}
 
+	/*
+	Metodo utilizzato da ClasseVirtuale per ottenere la lista di valutazioni
+	per quel preciso studente, uso come discriminanti solo
+	nome, cognome ed email
+	 */
+	@Override
+	public boolean equals(Object altroStudente) {
+
+		if (this == altroStudente) return true;
+
+		return (altroStudente instanceof Studente s) &&
+				this.getNome().equalsIgnoreCase(s.getNome()) &&
+				this.getCognome().equalsIgnoreCase(s.getCognome()) &&
+				this.getEmail().equalsIgnoreCase(s.getEmail());
+	}
 }

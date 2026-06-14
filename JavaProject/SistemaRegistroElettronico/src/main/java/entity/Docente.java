@@ -1,15 +1,18 @@
 package entity;
 
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 
 import java.util.ArrayList;
 import java.util.List;
 
-
+@Entity
 public class Docente extends Utente {
+	/*
+	Niente Id perché e già presente in Utente
+	 */
 
 	//Lista vuota perché potrebbe anche avere 0 classi
+	@OneToMany(mappedBy = "docente")
 	private List<ClasseVirtuale> classiGestite = new ArrayList<>();
 
 	//Utile per JPA
