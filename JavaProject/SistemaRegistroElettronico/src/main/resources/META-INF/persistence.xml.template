@@ -12,6 +12,14 @@
 
         <!-- Le entità le aggiungiamo qui dopo Generate Code da Visual Paradigm -->
 
+        <class>entity.Utente</class>
+        <class>entity.Studente</class>
+        <class>entity.Docente</class>
+        <class>entity.ClasseVirtuale</class>
+        <class>entity.Lezione</class>
+        <class>entity.Compito</class>
+        <class>entity.Valutazione</class>
+
         <properties>
             <property name="jakarta.persistence.jdbc.driver"
                       value="com.mysql.cj.jdbc.Driver"/>

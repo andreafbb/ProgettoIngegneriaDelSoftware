@@ -1,12 +1,27 @@
 package entity;
 
+import jakarta.persistence.*;
+
+@Entity
 public class Valutazione {
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
 	private String data;
 	private double voto;
 	private String descrizione;
+
+	@Enumerated(EnumType.STRING)
 	private Tipologia tipologia;
+
+	@ManyToOne
+	@JoinColumn(name = "classe_id")
 	private ClasseVirtuale classeVirtuale;
+
+	@ManyToOne
+	@JoinColumn(name = "studente_id")
 	private Studente studenteValutato;
 
 	protected Valutazione() {}

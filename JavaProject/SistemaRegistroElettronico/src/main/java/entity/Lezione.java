@@ -1,10 +1,20 @@
 package entity;
 
+import jakarta.persistence.*;
+
+@Entity
 public class Lezione {
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
 	private String data;
 	private String argomentoTrattato;
 	private String descrizione;
+
+	@ManyToOne
+	@JoinColumn(name = "classe_id")
 	private ClasseVirtuale classeVirtuale;
 
 	protected Lezione() {}

@@ -1,11 +1,21 @@
 package entity;
 
+import jakarta.persistence.*;
+
+@Entity
 public class Compito {
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
 	private String titolo;
 	private String dataDiAssegnazione;
 	private String descrizione;
 	private String dataDiScadenza;
+
+	@ManyToOne
+	@JoinColumn(name = "classe_id")
 	private ClasseVirtuale classeVirtuale;
 
 	protected Compito() {}

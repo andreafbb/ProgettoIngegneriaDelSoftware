@@ -18,14 +18,20 @@ public class ClasseVirtuale {
 	@JoinColumn(name = "docente_id")
 	private Docente docenteReferente;
 
-	@ManyToMany(mappedBy = "studenti")
+	@ManyToMany(mappedBy = "classi")
 	private List<Studente> studentiIscritti = new ArrayList<>();
 
 	/*
 	Liste degli elementi da aggiornare nel registro
 	 */
+
+	@OneToMany(mappedBy = "classeVirtuale")
 	private List<Lezione> lezioni = new ArrayList<>();
+
+	@OneToMany(mappedBy = "classeVirtuale")
 	private List<Compito> compiti = new ArrayList<>();
+
+	@OneToMany(mappedBy = "classeVirtuale")
 	private List<Valutazione> valutazioni = new ArrayList<>();
 
 	public ClasseVirtuale () {}

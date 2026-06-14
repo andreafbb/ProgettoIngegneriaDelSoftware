@@ -12,7 +12,7 @@ public class Docente extends Utente {
 	 */
 
 	//Lista vuota perché potrebbe anche avere 0 classi
-	@OneToMany(mappedBy = "docente")
+	@OneToMany(mappedBy = "docenteReferente")
 	private List<ClasseVirtuale> classiGestite = new ArrayList<>();
 
 	//Utile per JPA
