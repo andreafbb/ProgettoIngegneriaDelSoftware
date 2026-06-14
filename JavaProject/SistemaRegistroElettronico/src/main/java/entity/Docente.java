@@ -23,6 +23,18 @@ public class Docente extends Utente {
 	}
 
 	/*
+	Costruttore di copia per i getters esterni, per evitare modifiche
+	 */
+	public Docente(Docente altroDocente) {
+		super(altroDocente.getNome(),
+				altroDocente.getEmail(),
+				altroDocente.getCognome(),
+				altroDocente.getPassword());
+		this.classiGestite = new
+				ArrayList<>(altroDocente.classiGestite);
+	}
+
+	/*
 	Aggiunge una classe all'istanza corrente del Docente
 	 */
 	public void aggiungiClasse(ClasseVirtuale c){

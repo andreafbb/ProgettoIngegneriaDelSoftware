@@ -98,7 +98,11 @@ public class ClasseVirtuale {
 
 	public String getNome() { return this.nome; }
 
-	public Docente getDocenteReferente() { return this.docenteReferente; }
+
+	/*
+	Passo sempre una copia per proteggere da modifiche esterne
+	 */
+	public Docente getDocenteReferente() { return new Docente(this.docenteReferente); }
 
 	/*
 	Due ClasseVirtuale caricate da EntityManager diversi sono oggetti Java
