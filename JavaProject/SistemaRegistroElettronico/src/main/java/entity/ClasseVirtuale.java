@@ -36,8 +36,8 @@ public class ClasseVirtuale {
 
 	public ClasseVirtuale () {}
 
-	public ClasseVirtuale(Long id, Docente d, String nome){
-		this.id = id;
+	public ClasseVirtuale( Docente d, String nome){
+
 		this.docenteReferente = d;
 		this.nome = nome;
 	}

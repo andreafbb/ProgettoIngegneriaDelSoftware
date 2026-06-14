@@ -4,7 +4,7 @@ public class GestoreServiziStudente {
 
 	public void visualizzaProfilo() {
 		// TODO - implement controller.GestoreServiziStudente.visualizzaProfilo
-		throw new UnsupportedOperationException();visualizzaProfiloGestoreServiziStudentevisualizzaProfilo
+		throw new UnsupportedOperationException();
 	}
 
 }
