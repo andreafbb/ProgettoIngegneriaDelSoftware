@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="boundary.FormServiziDocente">
+  <grid id="27dc7" binding="panel1" default-binding="true" layout-manager="GridLayoutManager" row-count="4" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="0" vgap="20">
+    <margin top="25" left="30" bottom="25" right="30"/>
+    <constraints>
+      <xy x="20" y="20" width="500" height="400"/>
+    </constraints>
+    <properties/>
+    <border type="none"/>
+    <children>
+      <component id="title2" class="javax.swing.JLabel">
+        <constraints>
+          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false"/>
+        </constraints>
+        <properties>
+          <font name="SansSerif" size="24" style="1"/>
+          <text value="Accesso Docente"/>
+        </properties>
+      </component>
+      <grid id="fields2" layout-manager="GridLayoutManager" row-count="3" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="15" vgap="12">
+        <margin top="0" left="0" bottom="0" right="0"/>
+        <constraints>
+          <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+        </constraints>
+        <properties/>
+        <border type="none"/>
+        <children>
+          <component id="lblC2" class="javax.swing.JLabel">
+            <constraints>
+              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <font name="SansSerif" size="14"/>
+              <text value="Classe:"/>
+            </properties>
+          </component>
+          <component id="cmb2" class="javax.swing.JComboBox" binding="comboClasse">
+            <constraints>
+              <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <font name="SansSerif" size="14"/>
+            </properties>
+          </component>
+          <component id="lblN2" class="javax.swing.JLabel">
+            <constraints>
+              <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <font name="SansSerif" size="14"/>
+              <text value="Nome:"/>
+            </properties>
+          </component>
+          <component id="fldN2" class="javax.swing.JTextField" binding="fieldNome">
+            <constraints>
+              <grid row="1" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                <preferred-size width="250" height="30"/>
+              </grid>
+            </constraints>
+            <properties>
+              <font name="SansSerif" size="14"/>
+            </properties>
+          </component>
+          <component id="lblG2" class="javax.swing.JLabel">
+            <constraints>
+              <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <font name="SansSerif" size="14"/>
+              <text value="Cognome:"/>
+            </properties>
+          </component>
+          <component id="fldG2" class="javax.swing.JTextField" binding="fieldCognome">
+            <constraints>
+              <grid row="2" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                <preferred-size width="250" height="30"/>
+              </grid>
+            </constraints>
+            <properties>
+              <font name="SansSerif" size="14"/>
+            </properties>
+          </component>
+        </children>
+      </grid>
+      <component id="err2" class="javax.swing.JLabel" binding="labelErrore">
+        <constraints>
+          <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false"/>
+        </constraints>
+        <properties>
+          <font name="SansSerif" size="13" style="2"/>
+          <foreground color="-65536"/>
+          <text value=" "/>
+        </properties>
+      </component>
+      <component id="btn2" class="javax.swing.JButton" binding="buttonConferma">
+        <constraints>
+          <grid row="3" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false">
+            <preferred-size width="200" height="45"/>
+          </grid>
+        </constraints>
+        <properties>
+          <font name="SansSerif" size="16" style="1"/>
+          <text value="Conferma"/>
+        </properties>
+      </component>
+    </children>
+  </grid>
+</form>

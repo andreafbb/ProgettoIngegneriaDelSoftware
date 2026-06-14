@@ -38,4 +38,22 @@ public class Docente extends Utente {
 		throw new UnsupportedOperationException();
 	}
 
+	/*
+	Stesso criterio di Studente.equals (nome + cognome + email,
+	case-insensitive): serve per confrontare un Docente caricato dalla
+	query con il docenteReferente di una ClasseVirtuale caricata da
+	un EntityManager diverso.
+	 */
+	@Override
+	public boolean equals(Object altroDocente) {
+
+		if (this == altroDocente) return true;
+
+		return (altroDocente instanceof Docente d) &&
+				this.getNome().equalsIgnoreCase(d.getNome()) &&
+				this.getCognome().equalsIgnoreCase(d.getCognome()) &&
+				this.getEmail().equalsIgnoreCase(d.getEmail());
+	}
+
+
 }

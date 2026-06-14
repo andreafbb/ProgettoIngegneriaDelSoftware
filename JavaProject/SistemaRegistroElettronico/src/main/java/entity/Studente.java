@@ -1,9 +1,6 @@
 package entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinTable;
-import jakarta.persistence.ManyToMany;
+import jakarta.persistence.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,7 +17,11 @@ public class Studente extends Utente {
 	casi d'uso relativi all'iscrizione di uno studente è irrilevante a livello
 	di Entity, ma nelle tabelle bisogna inserirla
 	 */
-	@ManyToMany
+
+	/*
+	Questo per permettere la ricerca filtrata per classe e studente
+	 */
+	@ManyToMany(fetch = FetchType.EAGER)
 	@JoinTable(
 			name = "iscrizione",
 			joinColumns = @JoinColumn(name = "studente_id"),

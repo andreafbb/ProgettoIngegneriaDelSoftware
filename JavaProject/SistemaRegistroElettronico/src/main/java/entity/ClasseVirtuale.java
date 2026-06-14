@@ -98,4 +98,31 @@ public class ClasseVirtuale {
 
 	public String getNome() { return this.nome; }
 
+	public Docente getDocenteReferente() { return this.docenteReferente; }
+
+	/*
+	Due ClasseVirtuale caricate da EntityManager diversi sono oggetti Java
+	distinti: per confrontarle uso l'id (chiave primaria del DB)
+	La guardia su id != null evita falsi positivi tra entity non ancora
+	persistite.
+	 */
+	@Override
+	public boolean equals(Object altraClasse) {
+
+		if (this == altraClasse) return true;
+
+		return (altraClasse instanceof ClasseVirtuale c) &&
+				this.id != null &&
+				this.id.equals(c.id);
+	}
+
+	@Override
+	public int hashCode() {
+		return this.id == null ? 0 : this.id.hashCode();
+	}
+
+	@Override
+	public String toString() {
+		return this.getNome();
+	}
 }
