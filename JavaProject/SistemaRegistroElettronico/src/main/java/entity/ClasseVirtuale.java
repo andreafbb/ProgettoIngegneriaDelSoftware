@@ -96,4 +96,6 @@ public class ClasseVirtuale {
 		return new ArrayList<>(this.valutazioni);
 	}
 
+	public String getNome() { return this.nome; }
+
 }

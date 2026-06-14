@@ -6,6 +6,12 @@ import entity.ClasseVirtuale;
 import entity.Docente;
 import entity.Studente;
 
+/*
+Classe di prova per testare inizialmente se l'accesso al DB
+tramite la classe fornita dal docente fosse corretto e coerente con
+i dati inseriti dal MainSetupInsert
+ */
+
 public class MainTablesChek {
 
     public static void main(String[] args) {
@@ -20,7 +26,7 @@ public class MainTablesChek {
         System.out.println("Docente: " + docente.getNome() + " " + docente.getCognome()
                 + " (" + docente.getEmail() + ")");
 
-        System.out.println("Classe associata al docente: " + classe);
+        System.out.println("Classe associata al docente: " + classe.getNome());
 
         System.out.println("Studente 1: " + s1.getNome() + " " + s1.getCognome()
                 + " (" + s1.getEmail() + ")");
