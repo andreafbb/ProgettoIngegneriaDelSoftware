@@ -1,6 +1,7 @@
 package controller;
 
 import boundary.FormAggiornaRegistro;
+import boundary.FormConsultaRegistro;
 import boundary.FormGestioneRegistro;
 import boundary.FormSceltaClasse;
 import boundary.FormServiziDocente;
@@ -257,12 +258,53 @@ public class GestoreServiziDocente {
 			}
 		});
 
+		/*
+		Wiring del sotto-form di Consultazione.
+
+		Lezioni e Compiti della classe non cambiano mentre la finestra
+		e' aperta, quindi li popolo UNA VOLTA SOLA qui all'apertura del
+		registro. Le valutazioni invece dipendono dall'intervallo scelto
+		dal docente, quindi vengono caricate al click "Mostra" tramite
+		l'orchestratore privato consultaRegistro(...).
+		 */
+		FormConsultaRegistro formConsulta = form.getFormConsulta();
+		formConsulta.setLezioni(gestoreRegistroDocente.visualizzaLezioni(classe));
+		formConsulta.setCompiti(gestoreRegistroDocente.visualizzaCompiti(classe));
+
+		formConsulta.addMostraListener(e -> {
+
+			formConsulta.pulisciMessaggioMonitora();
+
+			LocalDate da = formConsulta.getDataDa();
+			LocalDate a = formConsulta.getDataA();
+
+			if (a.isBefore(da)) {
+				formConsulta.mostraErroreMonitora("La data finale non puo' essere prima di quella iniziale");
+				return;
+			}
+
+			consultaRegistro(formConsulta, classe, da, a);
+		});
+
 		frame.setVisible(true);
 	}
 
-	public void consultaRegistro() {
-		// TODO - implement controller.GestoreServiziDocente.consultaRegistro
-		throw new UnsupportedOperationException();
+	/*
+	Orchestratore del caso d'uso "Consulta Registro" — analogo di
+	visualizzaProfilo nel Controller studente.
+
+	Riceve l'intervallo gia' validato e tira fuori dal facade le
+	valutazioni della classe in quel range + la loro media. Le pusha
+	al Boundary, che si occupa della formattazione HTML.
+
+	BCED: io controller non parlo mai col database, lo fa solo il facade.
+	 */
+	private void consultaRegistro(FormConsultaRegistro form,
+	                              ClasseVirtuale classe, LocalDate da, LocalDate a) {
+		List<Valutazione> valutazioni = gestoreRegistroDocente
+				.visualizzaValutazioniConIntervallo(classe, da, a);
+		form.setValutazioniMonitorate(valutazioni);
+		form.setMediaMonitorata(gestoreRegistroDocente.calcolaMediaClasse(valutazioni));
 	}
 
 	/*

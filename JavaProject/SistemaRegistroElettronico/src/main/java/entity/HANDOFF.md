@@ -175,9 +175,19 @@ listener/setter elencati.
   (Lezioni/Compiti/Valutazioni — identica per dimensioni/stile a quella
   del docente: 95x22, font 11 bold, hgap 0, segmented client properties
   per il look nativo macOS), e `panelContenuto` bordato che ospita
-  alternativamente uno di tre `JScrollPane` (uno per tipo) che avvolgono
-  altrettanti `JList<String>` sopra `DefaultListModel<String>`.
+  alternativamente uno di tre componenti:
+  - per Lezioni/Compiti: un `JScrollPane` che avvolge un `JList<String>`
+    sopra `DefaultListModel<String>`;
+  - per Valutazioni: un `panelValutazioniContainer` (`JPanel` con
+    `BorderLayout`) che ha lo `scrollValutazioni` al CENTER e una
+    `labelMedia` (`SansSerif` bold 12, allineata a destra, padding 4/8)
+    al SOUTH. La label resta sempre visibile in basso a destra (non
+    scrolla con la lista) e mostra "Media: X.XX" formattata `%.2f`.
   Switch interno al Boundary via `mostraSotto(JComponent)`.
+  **Liste read-only**: tutte e tre le `JList` hanno un `ListSelectionModel`
+  no-op condiviso (sovrascrive `setSelectionInterval`/`addSelectionInterval`
+  con stub vuoti). Clic su un item non lascia l'evidenziazione "appiccicata":
+  intent semantico "non selezionabili".
   **Trucco HTML per evitare un `ListCellRenderer` custom**: ogni elemento
   del model e' una stringa che inizia con `<html>`; il `DefaultListCellRenderer`
   e' un `JLabel` che la interpreta come HTML basico (`<b>`, `<i>`, `<br>`,
@@ -188,19 +198,22 @@ listener/setter elencati.
   label nome), `addBackListener(ActionListener)`,
   `setLezioni(List<Lezione>)` / `setCompiti(List<Compito>)` /
   `setValutazioni(List<Valutazione>)` (clear del model + ciclo con
-  formattazione HTML degli item).
+  formattazione HTML degli item), `setMediaStudente(double)` (formatta
+  il double "grezzo" del facade con `%.2f`).
 - **`FormGestioneRegistro.java`** (+ `.form`) — schermata principale
   docente. Layout 3 righe: Back (alto-sinistra, piccolo), togglebar
   con 2 `JToggleButton` ("Aggiorna Registro" / "Consulta Registro"
   in `ButtonGroup`, compatti 130x26 centrati con hgap 8), pannello
-  `panelContenuto` con bordo che ospita alternativamente il
-  `formAggiorna` (istanza di `FormAggiornaRegistro` — form di
-  inserimento reale) e `panelConsulta` (ancora placeholder).
+  `panelContenuto` con bordo che ospita alternativamente i due
+  sotto-form veri: `formAggiorna` (istanza di `FormAggiornaRegistro`)
+  e `formConsulta` (istanza di `FormConsultaRegistro`).
   API: `getPanel`, `addBackListener(ActionListener)`,
-  `getFormAggiorna() : FormAggiornaRegistro` (lo espone al Controller
-  per registrare i Salva listener). **Lo switch tra i due sotto-pannelli
-  e' interno al Boundary**; `mostraSotto(JComponent)` accetta sia il
-  `panelConsulta` placeholder sia il `getPanel()` di `FormAggiornaRegistro`.
+  `getFormAggiorna() : FormAggiornaRegistro` (espone il sotto-form di
+  Aggiorna al Controller per registrare i Salva listener),
+  `getFormConsulta() : FormConsultaRegistro` (espone il sotto-form di
+  Consulta per registrare il listener "Mostra" e popolare le liste
+  Lezioni/Compiti). **Lo switch tra i due sotto-pannelli e' interno al
+  Boundary** via `mostraSotto(JComponent)`.
 - **`FormAggiornaRegistro.java`** (+ `.form`) — sotto-form del docente
   agganciato a `panelContenuto` di `FormGestioneRegistro`. Layout 2 righe:
   sub-toggle bar (Lezione/Compito/Valutazione, 95x22 ciascuno, font
@@ -230,6 +243,50 @@ listener/setter elencati.
     `pulisciMessaggioXxx()`, `pulisciCampiXxx()`. Per Valutazione in
     piu': `setStudentiClasse(List<Studente>)` per popolare la combo
     studenti.
+- **`FormConsultaRegistro.java`** (**senza `.form`**, costruito
+  programmaticamente) — sotto-form del docente agganciato a
+  `panelContenuto` di `FormGestioneRegistro` quando il toggle "Consulta
+  Registro" e' selezionato. Eccezione storica al pattern dei form bound
+  a `.form`: l'utente ha scelto di evitare l'overhead di scrivere XML
+  IntelliJ Designer per un form lineare. La struttura segue 1:1 il
+  pattern di `FormVisualizzazioneProfilo` per le prime due viste.
+  Layout 2 righe: sub-toggle bar (Lezioni / Compiti / Monitora — stesso
+  stile del profilo studente: 95x22, font 11 bold, segmented client
+  properties per il look nativo macOS) + `panelContenuto` con bordo
+  grigio chiaro (`0xCCCCCC`).
+  - **Lezioni / Compiti**: `JList<String>` read-only sopra
+    `DefaultListModel<String>`, avvolte in `JScrollPane`. Formato HTML
+    item identico a quello del profilo studente. Liste read-only via
+    `ListSelectionModel` no-op condiviso (stesso pattern del profilo).
+  - **Monitora**: `panelMonitora` con `BorderLayout(0, 8)`:
+    - **NORTH (header)**: barra `FlowLayout` centrata con "Da:"
+      `JSpinner(SpinnerDateModel)` + "A:" altro spinner +
+      `buttonMostra` (`SansSerif` bold 12, 100x26). Sotto la barra,
+      una `labelMessaggioMonitora` per feedback errore (italic 13,
+      centrata, default `" "` per evitare layout shift).
+    - **CENTER (risultato)**: `panelRisultatoMonitora` con
+      `BorderLayout`: scroll lista valutazioni filtrate al CENTER +
+      `labelMedia` ("Media: 0.00", `SansSerif` bold 12, allineata a
+      destra, padding 4/8) al SOUTH — stesso layout del Valutazioni
+      del profilo studente.
+  - **Default spinner Da/A**: 01/09 dell'anno scolastico corrente →
+    oggi. Il calcolo dell'anno scolastico tiene conto del mese: se
+    siamo a settembre o oltre, anno corrente; altrimenti anno
+    precedente. Default settato nel costruttore via `toDate(LocalDate)`
+    helper (`atStartOfDay(ZoneId.systemDefault())`).
+  - **Formato item Valutazione lato docente**: identico al profilo
+    studente con in piu' il **nome dello studente** in testa:
+    `"<html><b>Nome Cognome — voto — tipologia — data</b><br><font color='gray'><i>descrizione</i></font></html>"`.
+    Il nome si ricava da `v.getStudenteValutato()` — niente parametro
+    extra nel setter.
+  - **API**: `getPanel`, `setLezioni(List<Lezione>)`,
+    `setCompiti(List<Compito>)`, `getDataDa() : LocalDate` /
+    `getDataA() : LocalDate` (conversione `Date -> LocalDate` con
+    `ZoneId.systemDefault()`, come gli spinner di `FormAggiornaRegistro`),
+    `addMostraListener(ActionListener)`, `setValutazioniMonitorate(List<Valutazione>)`,
+    `setMediaMonitorata(double)` (formatta `%.2f` come la media studente),
+    `mostraErroreMonitora(String)` (rosso `0xC62828`),
+    `pulisciMessaggioMonitora()`.
 
 ### `controller/`
 - **`GestoreServiziStudente.java`** — orchestra il flow studente.
@@ -244,8 +301,11 @@ listener/setter elencati.
     popolare le 3 liste, registra il back, mostra il frame).
   - `visualizzaProfilo(FormVisualizzazioneProfilo, Studente, ClasseVirtuale)`
     privato — orchestratore della UC7: chiede al facade le 3 liste e le
-    pusha al Boundary tramite `setLezioni/Compiti/Valutazioni`. Il
-    Controller non vede mai `GestorePersistenza`.
+    pusha al Boundary tramite `setLezioni/Compiti/Valutazioni`. **In
+    piu' tiene la lista valutazioni in una variabile locale** per
+    riusarla nel calcolo della media: `gv.calcolaMediaStudente(valutazioni)`
+    → `setMediaStudente(double)`. Cosi' il facade non rifa il fetch
+    al DB. Il Controller non vede mai `GestorePersistenza`.
 - **`GestoreServiziDocente.java`** — orchestra il flow docente. Campi
   istanza: `gestoreRegistroDocente` e `gestoreAggiornamenti` (i due
   facade dell'entity, istanziati una volta sola). Metodi:
@@ -253,16 +313,24 @@ listener/setter elencati.
   `apriSceltaClasse(JFrame parent, Docente, List<ClasseVirtuale>)`
   (popup con le classi del docente),
   `apriGestioneRegistro(Docente, ClasseVirtuale)` (apre il registro,
-  registra il back, **carica gli studenti della classe** via
-  `gestoreRegistroDocente.cercaStudenti(classe)` e li passa al form
-  per la combo Valutazione, registra i 3 listener Salva
-  Lezione/Compito/Valutazione).
-  Tre orchestratori privati che fanno la catena "crea (facade A) +
-  registra (facade B)":
-  `aggiornaRegistroLezione(ClasseVirtuale, LocalDate, String, String) : boolean`,
-  `aggiornaRegistroCompito(ClasseVirtuale, String, LocalDate, String, LocalDate) : boolean`,
-  `aggiornaRegistroValutazione(ClasseVirtuale, LocalDate, double, String, Tipologia, Studente) : boolean`.
-  Stub residuo: `consultaRegistro()`.
+  registra il back; per "Aggiorna" **carica gli studenti della classe**
+  via `gestoreRegistroDocente.cercaStudenti(classe)` e li passa al form
+  per la combo Valutazione, e registra i 3 listener Salva
+  Lezione/Compito/Valutazione; per "Consulta" **popola le liste
+  Lezioni/Compiti UNA VOLTA SOLA** all'apertura via
+  `gestoreRegistroDocente.visualizzaLezioni/Compiti(classe)` e registra
+  il listener "Mostra" che valida l'intervallo `a.isBefore(da)` ->
+  errore rosso e altrimenti delega all'orchestratore `consultaRegistro`).
+  Quattro orchestratori privati:
+  - `aggiornaRegistroLezione(ClasseVirtuale, LocalDate, String, String) : boolean`,
+  - `aggiornaRegistroCompito(ClasseVirtuale, String, LocalDate, String, LocalDate) : boolean`,
+  - `aggiornaRegistroValutazione(ClasseVirtuale, LocalDate, double, String, Tipologia, Studente) : boolean`
+    (i primi tre fanno la catena "crea (facade A) + registra (facade B)"),
+  - `consultaRegistro(FormConsultaRegistro, ClasseVirtuale, LocalDate da, LocalDate a)`
+    — orchestratore della UC6, analogo a `visualizzaProfilo` lato
+    studente: chiede al facade `visualizzaValutazioniConIntervallo` +
+    `calcolaMediaClasse` e pusha al Boundary tramite
+    `setValutazioniMonitorate` / `setMediaMonitorata`.
 
 ### `entity/`
 - **Modello**: `Utente`, `Studente`, `Docente`, `ClasseVirtuale`,
@@ -289,9 +357,14 @@ listener/setter elencati.
       studente, "classeVirtuale", classe))`. Filtro a 2 campi: serve per
       isolare le valutazioni di un singolo studente in una specifica
       classe (uno studente puo' essere iscritto a piu' classi).
-    Stub futuro: `calcolaMediaStudente`.
+    - `calcolaMediaStudente(List<Valutazione>) : double` — riceve la
+      lista gia' pronta (no DB), guardia `isEmpty() -> return 0.0` per
+      evitare la divisione 0/0 che produrrebbe NaN. Il double ritornato
+      e' "grezzo" (non arrotondato): l'arrotondamento half-up alla
+      seconda cifra avviene lato Boundary con `String.format("%.2f", media)`,
+      coerente con la formattazione del voto nelle JList.
   - **`GestoreRegistroDocente.java`** — facade del flow docente, copre
-    sia ricerca/lettura sia persistenza:
+    ricerca/lettura, persistenza e consultazione del registro:
     - `cercaDocente(nome, cognome) : Docente`
     - `classiDi(Docente) : List<ClasseVirtuale>` (delega a `cercaClassiPerUtente`)
     - `cercaStudenti(ClasseVirtuale) : List<Studente>` (delega a
@@ -299,7 +372,25 @@ listener/setter elencati.
     - `registraLezione(Lezione) : boolean` (delega a `salva`)
     - `registraCompito(Compito) : boolean`
     - `registraValutazione(Valutazione) : boolean`
-    Stub futuri: `mostraRegistro`, `monitoraAndamento`, `calcolaMediaClasse`.
+    - `visualizzaLezioni(ClasseVirtuale) : List<Lezione>` — via
+      `cercaPerCampo(Lezione.class, "classeVirtuale", classe)`.
+      Stessa query del facade studente, esposta anche qui per BCED
+      (il Controller docente non dipende dal facade studente).
+    - `visualizzaCompiti(ClasseVirtuale) : List<Compito>` — simmetrico.
+    - `visualizzaValutazioniConIntervallo(ClasseVirtuale, LocalDate da, LocalDate a) : List<Valutazione>`
+      — fa il fetch di tutte le valutazioni della classe via
+      `cercaPerCampo(Valutazione.class, "classeVirtuale", classe)` e
+      poi **filtra in Java** sul campo `data` con
+      `!v.getData().isBefore(da) && !v.getData().isAfter(a)` (estremi
+      inclusi). Cosi' non serve estendere `GestorePersistenza` con
+      una query JPQL ad hoc per il range — rispetta il vincolo di
+      non toccare il file del professore. Vedi sezione 7.
+    - `calcolaMediaClasse(List<Valutazione>) : double` — stessa identica
+      logica di `calcolaMediaStudente` in `GestoreVisualizzazione`:
+      guardia `isEmpty() -> return 0.0`, poi somma/size. Nome diverso
+      per chiarezza semantica nel suo contesto (media della classe in
+      un intervallo, non di uno studente). Il Boundary arrotonda lato
+      UI con `%.2f`.
   - **`GestoreAggiornamentiRegistro.java`** — facade "creatore" del flow
     docente (NON parla con `database/`, ha responsabilita' di sola
     costruzione di Entity, oggi: wrap del costruttore; domani:
@@ -338,8 +429,37 @@ listener/setter elencati.
 - **`JpaUtil.java`** — singleton dell'`EntityManagerFactory`.
 
 ### `setup/`, `resources/META-INF/persistence.xml`
-Fuori scope. Il commit `Popolamento iniziale DB` ha riempito il DB con
-classi e utenti di test (necessario per testare il login studente/docente).
+Tecnicamente fuori scope, **ma `MainSetupInsert.java` e' stato esteso
+dall'utente** per popolare il DB con dati ricchi necessari ai test dei
+casi d'uso "Visualizza Profilo" e "Consulta Registro":
+- 1 docente (Alessandro Senatore) referente di 3 classi (5A, 4A, 3A
+  Informatica), 6 studenti per classe (18 totali).
+- Per la **5A Informatica**: 15 lezioni distribuite ottobre 2025 ->
+  aprile 2026 (programma standard Java + intro SQL), 15 compiti
+  agganciati 1:1 alle lezioni (assegnazione il giorno della lezione,
+  scadenza ~1 settimana dopo), 24 valutazioni (4 × 6 studenti):
+  - 2 `PROVA_SCRITTA` con **stessa data per tutti** (09/12/2025 e
+    13/04/2026 — compito in classe).
+  - 2 `PROVA_ORALE` con **date scaglionate** (una al giorno per
+    studente, sessioni di gennaio e maggio 2026).
+  - Voti volutamente variati cosi' le medie escono diverse (range da
+    ~5.75 a ~9.13).
+- Le altre classi (4A, 3A) hanno solo studenti, nessuna lezione/compito/
+  valutazione — utili per testare il flow di login multi-classe ma
+  non per Consulta.
+
+Lo schema viene **droppato e ricreato da zero** ad ogni run di
+`MainSetupInsert.main()` perche' apre una `EntityManagerFactory`
+una-tantum con `hibernate.hbm2ddl.auto = create`. Il `persistence.xml`
+resta su `update`, quindi i run dell'app non toccano lo schema:
+**solo questo main lo ricrea**. Conseguenza: qualsiasi dato inserito
+via UI dopo il setup viene perso al prossimo rilancio del setup.
+
+Per evitare una chiamata `salvaTutti(...)` con 60+ argomenti, il main
+usa un `ArrayList<Object>` aggregato (`Collections.addAll` per
+entita' singole + array delle nuove collezioni) e passa `toArray()`.
+
+`JpaUtil.java` e `persistence.xml` restano fuori scope.
 
 ---
 
@@ -585,6 +705,22 @@ per la scelta finale. La classe scelta dal popup e' garantita appartenere
 all'utente per costruzione (la lista popolata viene da `classiDi`),
 quindi non serve piu' validare a posteriori.
 
+**Filtro per intervallo di date (UC6 Consulta Registro)**: `cercaPerCampi`
+genera solo confronti `=`, non sa fare range (`>=`, `<=`, `BETWEEN`).
+Per `visualizzaValutazioniConIntervallo(classe, da, a)` la scelta e'
+stata di NON estendere `GestorePersistenza` con una query JPQL ad hoc
+(rispetto del vincolo "non toccare il file del professore"). Al posto,
+il facade `GestoreRegistroDocente` fa due passi:
+1. `cercaPerCampo(Valutazione.class, "classeVirtuale", classe)` per
+   prendere TUTTE le valutazioni della classe;
+2. filtro Java con `!v.getData().isBefore(da) && !v.getData().isAfter(a)`
+   (estremi inclusi, perche' `isBefore`/`isAfter` sono strict).
+
+Il filtro Java e' accettabile per il volume del progetto (poche
+centinaia di valutazioni). Per dataset grandi conviene una query JPQL
+con `BETWEEN`, ma richiederebbe l'estensione autorizzata del
+`GestorePersistenza`.
+
 **Mapping JPA rilevanti** (in piedi, alcuni "in eccesso" rispetto al
 fabbisogno corrente ma utili per accessi futuri fuori dall'`EntityManager`):
 
@@ -668,6 +804,10 @@ fabbisogno corrente ma utili per accessi futuri fuori dall'`EntityManager`):
   `GestoreServiziDocente`. Imposta `UIManager.setLookAndFeel(systemLookAndFeel)`
   prima di `invokeLater` (su macOS attiva Aqua per il segmented control).
 - `database/persistence.xml` e `setup/MainSetupInsert` per popolare il DB.
+- **Setup esteso (5A Informatica)**: 15 lezioni + 15 compiti +
+  24 valutazioni (4 × 6 studenti) — dataset realistico per testare
+  UC6/UC7 senza dover passare ogni volta da Aggiorna Registro. Vedi
+  sezione 5 setup per il dettaglio.
 
 **Flow Studente — completo end-to-end**:
 - `FormSceltaUtente` -> `FormServiziStudente` (solo nome+cognome) ->
@@ -677,10 +817,12 @@ fabbisogno corrente ma utili per accessi futuri fuori dall'`EntityManager`):
   facade (vedi UC7).
 - Back nel profilo riporta al login. Annulla nel popup torna al login.
 
-**Flow Docente — login completo**:
+**Flow Docente — completo end-to-end**:
 - `FormSceltaUtente` -> `FormServiziDocente` (solo nome+cognome) ->
   popup modale `FormSceltaClasse` (solo le classi del docente) ->
-  `FormGestioneRegistro` con toggle Aggiorna/Consulta funzionante.
+  `FormGestioneRegistro` con toggle Aggiorna/Consulta entrambi
+  agganciati a sotto-form veri (`FormAggiornaRegistro` /
+  `FormConsultaRegistro`).
 - Back nel registro riporta al login docente. Annulla nel popup torna
   al login.
 

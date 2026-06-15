@@ -29,13 +29,13 @@ public class FormGestioneRegistro {
 
     /*
      * Sotto-pannelli del parent.
-     * - panelAggiorna: delegato a FormAggiornaRegistro (sub-toggle bar
+     * - formAggiorna: delegato a FormAggiornaRegistro (sub-toggle bar
      *   Lezione/Compito/Valutazione + form di inserimento).
-     * - panelConsulta: ancora placeholder, sara' delegato a un Boundary
-     *   dedicato (FormConsultaRegistro) nel prossimo step.
+     * - formConsulta: delegato a FormConsultaRegistro (sub-toggle bar
+     *   Lezioni/Compiti/Monitora + form di monitoraggio).
      */
     private final FormAggiornaRegistro formAggiorna = new FormAggiornaRegistro();
-    private final JPanel panelConsulta = creaPlaceholder("Consultazione Registro — da implementare");
+    private final FormConsultaRegistro formConsulta = new FormConsultaRegistro();
 
     public FormGestioneRegistro() {
 
@@ -48,7 +48,7 @@ public class FormGestioneRegistro {
         mostraSotto(formAggiorna.getPanel());
 
         toggleAggiorna.addActionListener(e -> mostraSotto(formAggiorna.getPanel()));
-        toggleConsulta.addActionListener(e -> mostraSotto(panelConsulta));
+        toggleConsulta.addActionListener(e -> mostraSotto(formConsulta.getPanel()));
     }
 
     public JComponent getPanel() {
@@ -63,6 +63,15 @@ public class FormGestioneRegistro {
      */
     public FormAggiornaRegistro getFormAggiorna() {
         return formAggiorna;
+    }
+
+    /*
+     * Espone il sotto-form di Consultazione al Controller: stesso pattern
+     * di getFormAggiorna(). Da qui GestoreServiziDocente registra il
+     * listener "Mostra" e popola le liste Lezioni/Compiti all'apertura.
+     */
+    public FormConsultaRegistro getFormConsulta() {
+        return formConsulta;
     }
 
     /*
@@ -83,15 +92,6 @@ public class FormGestioneRegistro {
         panelContenuto.add(sotto, BorderLayout.CENTER);
         panelContenuto.revalidate();
         panelContenuto.repaint();
-    }
-
-    private static JPanel creaPlaceholder(String testo) {
-        JPanel p = new JPanel(new BorderLayout());
-        JLabel l = new JLabel(testo, SwingConstants.CENTER);
-        l.setFont(new Font("SansSerif", Font.ITALIC, 16));
-        l.setForeground(new Color(120, 120, 120));
-        p.add(l, BorderLayout.CENTER);
-        return p;
     }
 
     {
