@@ -1,5 +1,9 @@
 package database;
 
+import entity.ClasseVirtuale;
+import entity.Docente;
+import entity.Studente;
+import entity.Utente;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 
@@ -7,6 +11,103 @@ import java.util.List;
 import java.util.Map;
 
 public class GestorePersistenza {
+
+    /*
+    Aggiungiamo un metodo ad hoc per ricevere la lista di studenti per ogni classe
+     */
+
+    public List<Studente> cercaPerClasse(ClasseVirtuale classe){
+
+        EntityManager em = JpaUtil.getInstance().getEntityManager();
+
+        try {
+
+            String jpql;
+
+            jpql = "SELECT s " +
+                    "FROM Studente s " +
+                    "JOIN s.classi c " +
+                    "WHERE c = :classe";
+
+            TypedQuery<Studente> query = em.createQuery(
+                    jpql,
+                    Studente.class
+            );
+            query.setParameter("classe", classe);
+            return query.getResultList();
+
+        } finally {
+            em.close();
+        }
+
+    }
+
+    /*
+    Aggiungiamo un metodo ad hoc per mantenere coerenza con il modello di dominio:
+    Per poter ricavare le ClassiVirtuali dagli Studenti/Docenti che appartengono a quelle
+    classi, sarebbe necessario effettuare query con una JOIN, che non è prevista
+    nel metodo cercaPerCampi
+     */
+
+    public List<ClasseVirtuale> cercaClassiPerUtente(Utente utente){
+
+        EntityManager em = JpaUtil.getInstance().getEntityManager();
+
+        try{
+
+            String jpql;
+
+           /*
+           Devo costruire la stringa, parto dai 2 casi distinti, perché userò il metodo
+           in due situazioni differenti
+            */
+            if (utente instanceof Docente){
+
+                    /*
+                    Uso i nomi dei riferimenti e delle classi, che poi vengono
+                    convertiti con colonne e tabelle del database
+                     */
+
+                jpql = "SELECT c " +
+                        "FROM ClasseVirtuale c " +
+                        "WHERE c.docenteReferente = :utente";
+
+            } else if (utente instanceof Studente){
+
+                /*
+                JOIN necessaria come dicevamo perché Studente e ClasseVirtuale
+                nel DB sono mappati con classe associatica
+                 */
+
+                jpql = "SELECT c " +
+                        "FROM ClasseVirtuale c JOIN c.studentiIscritti s " +
+                        "WHERE s = :utente";
+
+            } else {
+                //Lista vuota se per caso qualcosa è andato storto nella conversione
+                return List.of();
+            }
+
+            /*
+            Dopo aver creato la query, ci verrà restituita la lista delle classi associate a
+            quell'utente
+             */
+            TypedQuery<ClasseVirtuale> query = em.createQuery(
+                    jpql,
+                    ClasseVirtuale.class
+            );
+            query.setParameter("utente", utente);
+            return query.getResultList();
+
+
+
+        } finally {
+            em.close();
+        }
+
+    }
+
+
 
     /*
      * Salva nel database un oggetto persistente.

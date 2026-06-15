@@ -28,10 +28,13 @@ public class FormGestioneRegistro {
     private JPanel panelContenuto;
 
     /*
-     * Sotto-pannelli costruiti programmaticamente. Restano placeholder
-     * finche' non implementeremo i due casi d'uso.
+     * Sotto-pannelli del parent.
+     * - panelAggiorna: delegato a FormAggiornaRegistro (sub-toggle bar
+     *   Lezione/Compito/Valutazione + form di inserimento).
+     * - panelConsulta: ancora placeholder, sara' delegato a un Boundary
+     *   dedicato (FormConsultaRegistro) nel prossimo step.
      */
-    private final JPanel panelAggiorna = creaPlaceholder("Aggiornamento Registro — da implementare");
+    private final FormAggiornaRegistro formAggiorna = new FormAggiornaRegistro();
     private final JPanel panelConsulta = creaPlaceholder("Consultazione Registro — da implementare");
 
     public FormGestioneRegistro() {
@@ -42,14 +45,24 @@ public class FormGestioneRegistro {
 
         // Stato iniziale: vista "Aggiorna" attiva
         toggleAggiorna.setSelected(true);
-        mostraSotto(panelAggiorna);
+        mostraSotto(formAggiorna.getPanel());
 
-        toggleAggiorna.addActionListener(e -> mostraSotto(panelAggiorna));
+        toggleAggiorna.addActionListener(e -> mostraSotto(formAggiorna.getPanel()));
         toggleConsulta.addActionListener(e -> mostraSotto(panelConsulta));
     }
 
     public JComponent getPanel() {
         return panel1;
+    }
+
+    /*
+     * Espone il sotto-form di Aggiornamento al Controller, cosi' che
+     * GestoreServiziDocente possa registrare i listener "Salva" e leggere
+     * i campi senza dover passare per metodi pass-through duplicati su
+     * questo parent.
+     */
+    public FormAggiornaRegistro getFormAggiorna() {
+        return formAggiorna;
     }
 
     /*
@@ -65,7 +78,7 @@ public class FormGestioneRegistro {
      * richiesto. revalidate + repaint sono necessari perche' stiamo
      * cambiando i figli di un container gia' visibile.
      */
-    private void mostraSotto(JPanel sotto) {
+    private void mostraSotto(JComponent sotto) {
         panelContenuto.removeAll();
         panelContenuto.add(sotto, BorderLayout.CENTER);
         panelContenuto.revalidate();
@@ -97,22 +110,22 @@ public class FormGestioneRegistro {
      */
     private void $$$setupUI$$$() {
         panel1 = new JPanel();
-        panel1.setLayout(new GridLayoutManager(3, 1, new Insets(25, 30, 25, 30), 0, 15));
+        panel1.setLayout(new GridLayoutManager(3, 1, new Insets(25, 30, 25, 30), 0, 10));
         buttonBack = new JButton();
         buttonBack.setFont(new Font("SansSerif", Font.PLAIN, 12));
         buttonBack.setText("Indietro");
         panel1.add(buttonBack, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(80, 24), null, 0, false));
         final JPanel togglebar = new JPanel();
-        togglebar.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), 15, 0, true, false));
-        panel1.add(togglebar, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        togglebar.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), 8, 0, true, false));
+        panel1.add(togglebar, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         toggleAggiorna = new JToggleButton();
-        toggleAggiorna.setFont(new Font("SansSerif", Font.BOLD, 14));
+        toggleAggiorna.setFont(new Font("SansSerif", Font.BOLD, 12));
         toggleAggiorna.setText("Aggiorna Registro");
-        togglebar.add(toggleAggiorna, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(200, 40), null, 0, false));
+        togglebar.add(toggleAggiorna, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(130, 26), null, 0, false));
         toggleConsulta = new JToggleButton();
-        toggleConsulta.setFont(new Font("SansSerif", Font.BOLD, 14));
+        toggleConsulta.setFont(new Font("SansSerif", Font.BOLD, 12));
         toggleConsulta.setText("Consulta Registro");
-        togglebar.add(toggleConsulta, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(200, 40), null, 0, false));
+        togglebar.add(toggleConsulta, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(130, 26), null, 0, false));
         panelContenuto = new JPanel();
         panelContenuto.setLayout(new BorderLayout(0, 0));
         panelContenuto.setBorder(BorderFactory.createLineBorder(new Color(-3355444)));

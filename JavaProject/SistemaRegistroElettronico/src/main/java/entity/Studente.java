@@ -68,4 +68,13 @@ public class Studente extends Utente {
 				this.getCognome().equalsIgnoreCase(s.getCognome()) &&
 				this.getEmail().equalsIgnoreCase(s.getEmail());
 	}
+
+	/*
+	Serve per impostare cosa visualizzerà il Form di inserimento della valutazione
+	 */
+
+	@Override
+	public String toString() {
+		return this.getNome()+" "+this.getCognome();
+	}
 }

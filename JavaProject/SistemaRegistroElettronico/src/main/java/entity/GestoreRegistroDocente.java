@@ -23,62 +23,51 @@ public class GestoreRegistroDocente {
 	private final GestorePersistenza gestorePersistenza = new GestorePersistenza();
 
 	/*
-	 * Ritorna tutte le ClasseVirtuale presenti nel DB.
-	 * Map vuota -> cercaPerCampi non genera WHERE -> equivale a SELECT *.
-	 * Duplicato intenzionale rispetto a GestoreVisualizzazione: ogni facade
-	 * copre un caso d'uso ed e' autonomo. In futuro la "lista classi
-	 * visibili al docente" potrebbe diventare diversa (es. solo quelle che
-	 * lui stesso gestisce) senza impattare il flow studente.
+	 * Cerca il Docente per nome+cognome senza vincolo di classe.
+	 * Restituisce null se non esiste alcun match. Non trattiamo il caso di
+	 * omonimi: prendiamo il primo risultato.
 	 */
-	public List<ClasseVirtuale> elencoClassi() {
-		return gestorePersistenza.cercaPerCampi(ClasseVirtuale.class, Map.of());
-	}
-
-	/*
-	 * Cerca il Docente con nome+cognome dati che e' referente della classe
-	 * indicata.
-	 *
-	 * Speculare a GestoreVisualizzazione.cercaStudenteInClasse:
-	 *  1) filtra al DB per nome+cognome (campi semplici)
-	 *  2) filtra in Java verificando che il candidato sia uguale al
-	 *     docenteReferente della classe (equals di Docente per
-	 *     nome+cognome+email; la @ManyToOne docenteReferente e' EAGER di
-	 *     default, quindi accessibile anche con EM chiuso).
-	 */
-	public Docente cercaDocenteDiClasse(String nome,
-										String cognome,
-										ClasseVirtuale classe) {
-
-		List<Docente> candidati = gestorePersistenza.cercaPerCampi(
+	public Docente cercaDocente(String nome, String cognome) {
+		return gestorePersistenza.cercaPrimoPerCampi(
 				Docente.class,
 				Map.of("nome", nome, "cognome", cognome)
 		);
-
-		Docente referente = classe.getDocenteReferente();
-		if (referente == null) return null;
-
-		for (Docente d : candidati) {
-			if (d.equals(referente)) {
-				return d;
-			}
-		}
-
-		return null;
 	}
 
-	public void registraLezione() {
-		// TODO - implement entity.GestoreRegistroDocente.registraLezione
-		throw new UnsupportedOperationException();
+	/*
+	Metodo utile per ricevere la lista di studenti di una classe, per poter
+	selezionare lo studente desiderato al momento dell'inserimento di una Valutazione
+	 */
+
+	public List<Studente> cercaStudenti(ClasseVirtuale classe){
+			return gestorePersistenza.cercaPerClasse(classe);
 	}
 
-	public void registraCompito() {
-		// TODO - implement entity.GestoreRegistroDocente.registraCompito
-		throw new UnsupportedOperationException();
+	/*
+	 * Ritorna le ClasseVirtuale di cui il Docente e' referente, recuperate
+	 * con JOIN al DB tramite cercaClassiPerUtente (no filtro Java).
+	 */
+	public List<ClasseVirtuale> classiDi(Docente docente) {
+		return gestorePersistenza.cercaClassiPerUtente(docente);
 	}
 
-	public void registraValutazione() {
-		// TODO - implement entity.GestoreRegistroDocente.registraValutazione
-		throw new UnsupportedOperationException();
+	/*
+	 * Persiste una Lezione gia' costruita da
+	 * GestoreAggiornamentiRegistro.creaLezione. Delega a
+	 * GestorePersistenza.salva, che ritorna true se il commit JPA
+	 * e' andato a buon fine, false altrimenti. Il Controller usa il
+	 * boolean per dare feedback all'utente.
+	 */
+	public boolean registraLezione(Lezione lezione) {
+		return gestorePersistenza.salva(lezione);
+	}
+
+	public boolean registraCompito(Compito compito) {
+		return gestorePersistenza.salva(compito);
+	}
+
+	public boolean registraValutazione(Valutazione valutazione) {
+		return gestorePersistenza.salva(valutazione);
 	}
 
 	public void mostraRegistro() {

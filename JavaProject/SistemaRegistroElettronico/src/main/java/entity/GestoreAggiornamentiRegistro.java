@@ -1,20 +1,33 @@
 package entity;
 
+import java.time.LocalDate;
+
 public class GestoreAggiornamentiRegistro {
 
-	public void creaLezione() {
-		// TODO - implement entity.GestoreAggiornamentiRegistro.creaLezione
-		throw new UnsupportedOperationException();
+	/*
+	Metodi di creazione degli oggetti relativi all'aggiornamento del registro:
+
+	Caso d'uso orchestrato dal controller GestoreServiziDocente e dal
+	facade GestoreRegistroDocente
+
+	 */
+
+	public Lezione creaLezione(LocalDate data, String argomentoTrattato, String descrizione, ClasseVirtuale classeVirtuale) {
+
+		return new Lezione(data, argomentoTrattato, descrizione, classeVirtuale);
+
 	}
 
-	public void creaCompito() {
-		// TODO - implement entity.GestoreAggiornamentiRegistro.creaCompito
-		throw new UnsupportedOperationException();
+	public Compito creaCompito(String titolo, LocalDate dataDiAssegnazione, String descrizione, LocalDate dataDiScadenza, ClasseVirtuale classeVirtuale) {
+
+		return new Compito(titolo, dataDiAssegnazione, descrizione, dataDiScadenza, classeVirtuale);
+
 	}
 
-	public void creaValutazione() {
-		// TODO - implement entity.GestoreAggiornamentiRegistro.creaValutazione
-		throw new UnsupportedOperationException();
+	public Valutazione creaValutazione(LocalDate data, double voto, String descrizione, Tipologia tipologia, ClasseVirtuale classeVirtuale, Studente studenteValutato) {
+
+		return new Valutazione(data, voto, descrizione, tipologia, classeVirtuale, studenteValutato);
+
 	}
 
 }

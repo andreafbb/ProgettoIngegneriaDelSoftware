@@ -2,6 +2,8 @@ package entity;
 
 import jakarta.persistence.*;
 
+import java.time.LocalDate;
+
 @Entity
 public class Valutazione {
 
@@ -9,7 +11,7 @@ public class Valutazione {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	private String data;
+	private LocalDate data;
 	private double voto;
 	private String descrizione;
 
@@ -26,7 +28,7 @@ public class Valutazione {
 
 	protected Valutazione() {}
 
-	public Valutazione(String data, double voto, String descrizione, Tipologia tipologia, ClasseVirtuale classeVirtuale, Studente studenteValutato) {
+	public Valutazione(LocalDate data, double voto, String descrizione, Tipologia tipologia, ClasseVirtuale classeVirtuale, Studente studenteValutato) {
 		this.data = data;
 		this.voto = voto;
 		this.descrizione = descrizione;
@@ -35,7 +37,7 @@ public class Valutazione {
 		this.studenteValutato = studenteValutato;
 	}
 
-	public String getData() {
+	public LocalDate getData() {
 		return data;
 	}
 

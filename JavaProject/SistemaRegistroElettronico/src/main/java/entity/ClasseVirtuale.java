@@ -63,11 +63,6 @@ public class ClasseVirtuale {
 		this.valutazioni.add(v);
 	}
 
-	public void cercaStudente() {
-		// TODO - implement entity.ClasseVirtuale.cercaStudente
-		throw new UnsupportedOperationException();
-	}
-
 	public List<Compito> getElencoCompiti() {
 		return new ArrayList<>(this.compiti);
 	}

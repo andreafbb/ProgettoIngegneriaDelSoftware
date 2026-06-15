@@ -6,6 +6,7 @@ import controller.GestoreServiziStudente;
 
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 
 /*
  * Punto di ingresso dell'applicazione.
@@ -16,6 +17,19 @@ import javax.swing.SwingUtilities;
 public class MainAvviaApp {
 
     public static void main(String[] args) {
+        /*
+         * Attivo il LookAndFeel di sistema (su macOS = Aqua) prima di costruire
+         * qualunque componente Swing. Serve perche' FormAggiornaRegistro usa
+         * le client property "JButton.buttonType=segmented" + "segmentPosition"
+         * per ottenere il segmented control nativo su Lezione/Compito/Valutazione:
+         * quelle property vengono renderizzate solo da Aqua. Se per qualche
+         * motivo il L&F non e' disponibile, ci si ricade su quello di default
+         * e i toggle restano funzionali (solo non segmentati graficamente).
+         */
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception ignored) {
+        }
         SwingUtilities.invokeLater(MainAvviaApp::avviaInterfaccia);
     }
 

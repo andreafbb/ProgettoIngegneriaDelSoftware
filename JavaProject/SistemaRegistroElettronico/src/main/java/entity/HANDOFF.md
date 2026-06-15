@@ -55,10 +55,17 @@ schema DB.
 
 ## 2. Vincoli CRITICI
 
-- **`database/GestorePersistenza.java` e' il file del professore. NON
-  modificare.** Sessioni precedenti hanno provato ad aggiungere metodi
-  e l'utente ha vetato. Verificare prima di ogni edit di non puntare
-  questo file.
+- **`database/GestorePersistenza.java` e' il file del professore.** I
+  metodi CRUD generici originali (`salva`, `salvaTutti`, `trovaPerId`,
+  `cercaPerCampo`, `cercaPerCampi`, `cercaPrimoPerCampi`, `aggiorna`,
+  `elimina`) restano intoccabili: NON modificarli. Il file e' stato
+  esteso dall'utente con DUE metodi domain-specific (entrambi vedi
+  sezione 7): `cercaClassiPerUtente(Utente)` per il caso
+  "Utente -> classi" e `cercaPerClasse(ClasseVirtuale)` per il caso
+  "Classe -> studenti". Sono casi che richiedono una JOIN che
+  `cercaPerCampi` non sa generare. Ulteriori estensioni dello stesso
+  tipo richiedono autorizzazione esplicita dell'utente (non aggiungere
+  metodi a freddo).
 - **`$$$setupUI$$$()`** nei `*.java` legati a `*.form` e'
   auto-generato da IntelliJ GUI Designer. **Non editare a mano**: alla
   prossima apertura del `.form` IntelliJ lo rigenera, sovrascrivendo
@@ -127,7 +134,10 @@ contatto tra business e persistenza e' sempre un metodo di un facade.
 ## 5. Mappa dei file
 
 ### `app/`
-- **`MainAvviaApp.java`** — entry point. `main` avvia su EDT
+- **`MainAvviaApp.java`** — entry point. `main` prima imposta
+  `UIManager.setLookAndFeel(systemLookAndFeelClassName)` (su macOS attiva
+  Aqua, necessario per il segmented control di `FormAggiornaRegistro`;
+  try/catch silenzioso se il L&F non c'e'), poi avvia su EDT
   (`SwingUtilities.invokeLater`) il metodo statico privato
   `avviaInterfaccia()`, che mostra `FormSceltaUtente`.
 
@@ -140,16 +150,25 @@ listener/setter elencati.
   "Studente" e "Docente".
   API: `getPanel`, `addStudenteListener(ActionListener)`,
   `addDocenteListener(ActionListener)`.
-- **`FormServiziStudente.java`** (+ `.form`) — login studente. Combo
-  `ClasseVirtuale` + `fieldNome` + `fieldCognome` + `labelErrore` +
-  `buttonConferma`.
-  API: `getPanel`, `setClassi(List<ClasseVirtuale>)`,
-  `getClasseSelezionata`, `getNomeInserito`, `getCognomeInserito`,
+- **`FormServiziStudente.java`** (+ `.form`) — login studente. Solo
+  `fieldNome` + `fieldCognome` + `labelErrore` + `buttonConferma`
+  (niente combo classi: la scelta della classe avviene dopo, nel popup
+  `FormSceltaClasse`).
+  API: `getPanel`, `getNomeInserito`, `getCognomeInserito`,
   `mostraErrore(String)`, `pulisciErrore()`,
   `addConfermaListener(ActionListener)`.
 - **`FormServiziDocente.java`** (+ `.form`) — login docente, **speculare**
   a `FormServiziStudente` (stessa struttura, titolo "Accesso Docente").
-  Stessa API (`setClassi`, `getClasseSelezionata`, ecc.).
+  Stessa API.
+- **`FormSceltaClasse.java`** (+ `.form`) — popup modale per scegliere
+  la classe DOPO il login. `JPanel` bound a `.form`; il Controller lo
+  wrappa in un `JDialog` `APPLICATION_MODAL` (non un `JFrame`: e' una
+  scelta secondaria sopra al login). Combo classi + bottoni
+  Annulla/Conferma. Su Annulla / X il dialog si chiude restituendo
+  `null`; su Conferma restituisce la classe selezionata.
+  API: `getPanel`, `setClassi(List<ClasseVirtuale>)`,
+  `getClasseSelezionata`, `addConfermaListener(ActionListener)`,
+  `addAnnullaListener(ActionListener)`.
 - **`FormVisualizzazioneProfilo.java`** (+ `.form`) — profilo studente.
   Per ora: bottone "Indietro" (alto-sinistra, piccolo, 80x24) + label
   centrata "Profilo di {Nome} {Cognome}".
@@ -158,55 +177,133 @@ listener/setter elencati.
 - **`FormGestioneRegistro.java`** (+ `.form`) — schermata principale
   docente. Layout 3 righe: Back (alto-sinistra, piccolo), togglebar
   con 2 `JToggleButton` ("Aggiorna Registro" / "Consulta Registro"
-  in `ButtonGroup`), pannello `panelContenuto` con bordo che ospita
-  alternativamente i sotto-pannelli `panelAggiorna` / `panelConsulta`
-  (oggi placeholder con label "— da implementare").
-  API: `getPanel`, `addBackListener(ActionListener)`. **Lo switch tra
-  i due sotto-pannelli e' interno al Boundary** (gli `ActionListener`
-  sui toggle sono registrati nel costruttore del form e chiamano
-  `mostraSotto(panel)`).
+  in `ButtonGroup`, compatti 130x26 centrati con hgap 8), pannello
+  `panelContenuto` con bordo che ospita alternativamente il
+  `formAggiorna` (istanza di `FormAggiornaRegistro` — form di
+  inserimento reale) e `panelConsulta` (ancora placeholder).
+  API: `getPanel`, `addBackListener(ActionListener)`,
+  `getFormAggiorna() : FormAggiornaRegistro` (lo espone al Controller
+  per registrare i Salva listener). **Lo switch tra i due sotto-pannelli
+  e' interno al Boundary**; `mostraSotto(JComponent)` accetta sia il
+  `panelConsulta` placeholder sia il `getPanel()` di `FormAggiornaRegistro`.
+- **`FormAggiornaRegistro.java`** (+ `.form`) — sotto-form del docente
+  agganciato a `panelContenuto` di `FormGestioneRegistro`. Layout 2 righe:
+  sub-toggle bar (Lezione/Compito/Valutazione, 95x22 ciascuno, font
+  SansSerif 11 bold, hgap 0) + `panelContenuto` interno che ospita
+  alternativamente i tre form di inserimento (tutti costruiti
+  programmaticamente, niente `.form` per i sotto-pannelli).
+  - **Sub-toggle**: client property `JButton.buttonType=segmented`
+    + `segmentPosition=first/middle/last`. Su Aqua (macOS) appaiono
+    come un segmented control nativo; altrove sono toggle normali.
+  - **panelLezione** (`creaFormLezione`): `JSpinner` data + `JTextField`
+    argomento + `JTextField` descrizione + bottone Salva + label
+    messaggio.
+  - **panelCompito** (`creaFormCompito`): `JTextField` titolo + `JSpinner`
+    data assegnazione + `JTextField` descrizione + `JSpinner` data
+    scadenza + bottone Salva + label messaggio.
+  - **panelValutazione** (`creaFormValutazione`): `JSpinner` data +
+    `JSpinner` numerico voto (`SpinnerNumberModel(6.0, 0.0, 10.0, 0.5)`)
+    + `JTextField` descrizione + `JComboBox<Tipologia>` (riempita da
+    `Tipologia.values()`) + `JComboBox<Studente>` (riempita dal
+    Controller via `setStudentiClasse`) + bottone Salva + label messaggio.
+  - **Spinner data**: `new SpinnerDateModel()` + `new JSpinner.DateEditor(spinner, "dd/MM/yyyy")`.
+    `getXxxData() : LocalDate` converte via
+    `((Date) sp.getValue()).toInstant().atZone(ZoneId.systemDefault()).toLocalDate()`.
+  - **API per ogni sotto-caso** (Lezione/Compito/Valutazione, identico
+    pattern): `getXxx` per ogni campo, `addSalvaXxxListener(ActionListener)`,
+    `mostraErroreXxx(String)` (rosso), `mostraSuccessoXxx(String)` (verde),
+    `pulisciMessaggioXxx()`, `pulisciCampiXxx()`. Per Valutazione in
+    piu': `setStudentiClasse(List<Studente>)` per popolare la combo
+    studenti.
 
 ### `controller/`
 - **`GestoreServiziStudente.java`** — orchestra il flow studente.
   Metodi: `avvia()` (apre form login e gestisce conferma),
-  `apriProfilo(Studente, ClasseVirtuale)` (apre il profilo e registra il
-  back). Stub: `visualizzaProfilo()`.
-- **`GestoreServiziDocente.java`** — orchestra il flow docente. Metodi:
-  `avvia()` (login docente), `apriGestioneRegistro(Docente,
-  ClasseVirtuale)` (apre il registro e registra il back). Stub:
-  `consultaRegistro()`, `aggiornaRegistro()`.
+  `apriSceltaClasse(JFrame parent, Studente, List<ClasseVirtuale>)`
+  (apre il `JDialog` modale `FormSceltaClasse` con le classi dello
+  studente, gestisce conferma/annulla),
+  `apriProfilo(Studente, ClasseVirtuale)` (apre il profilo e registra
+  il back). Stub: `visualizzaProfilo()`.
+- **`GestoreServiziDocente.java`** — orchestra il flow docente. Campi
+  istanza: `gestoreRegistroDocente` e `gestoreAggiornamenti` (i due
+  facade dell'entity, istanziati una volta sola). Metodi:
+  `avvia()` (login docente, usa il campo `gestoreRegistroDocente`),
+  `apriSceltaClasse(JFrame parent, Docente, List<ClasseVirtuale>)`
+  (popup con le classi del docente),
+  `apriGestioneRegistro(Docente, ClasseVirtuale)` (apre il registro,
+  registra il back, **carica gli studenti della classe** via
+  `gestoreRegistroDocente.cercaStudenti(classe)` e li passa al form
+  per la combo Valutazione, registra i 3 listener Salva
+  Lezione/Compito/Valutazione).
+  Tre orchestratori privati che fanno la catena "crea (facade A) +
+  registra (facade B)":
+  `aggiornaRegistroLezione(ClasseVirtuale, LocalDate, String, String) : boolean`,
+  `aggiornaRegistroCompito(ClasseVirtuale, String, LocalDate, String, LocalDate) : boolean`,
+  `aggiornaRegistroValutazione(ClasseVirtuale, LocalDate, double, String, Tipologia, Studente) : boolean`.
+  Stub residuo: `consultaRegistro()`.
 
 ### `entity/`
 - **Modello**: `Utente`, `Studente`, `Docente`, `ClasseVirtuale`,
   `Lezione`, `Compito`, `Valutazione`, `Tipologia`.
+  - `Studente.toString()` ritorna `"Nome Cognome"` (usata dalla combo
+    `JComboBox<Studente>` nel form Valutazione — niente renderer custom).
+  - `Lezione.data`, `Compito.dataDiAssegnazione`/`dataDiScadenza`,
+    `Valutazione.data` sono `LocalDate` (non String), per coerenza con
+    gli spinner `SpinnerDateModel` lato Boundary.
 - **Facade (parlano con `database/`)**:
   - **`GestoreVisualizzazione.java`** — facade del flow studente.
     Attributo `private final GestorePersistenza gestorePersistenza =
     new GestorePersistenza();`. Metodi attivi:
-    `elencoClassi() : List<ClasseVirtuale>`,
-    `cercaStudenteInClasse(String nome, String cognome,
-    ClasseVirtuale classe) : Studente`. Stub futuri:
-    `calcolaMediaStudente`, `visualizzaLezioni`, `visualizzaCompiti`,
-    `visualizzaValutazioni`.
-  - **`GestoreRegistroDocente.java`** — facade del flow docente.
-    Stesso pattern, metodi attivi: `elencoClassi()`,
-    `cercaDocenteDiClasse(nome, cognome, classe)`. Stub futuri:
-    `registraLezione`, `registraCompito`, `registraValutazione`,
-    `mostraRegistro`, `monitoraAndamento`, `calcolaMediaClasse`.
-  - **`GestoreAggiornamentiRegistro.java`** — facade in roadmap per la
-    sezione "Aggiorna Registro" del docente (creazione di lezioni,
-    compiti, valutazioni). Attualmente tutti i metodi sono stub
-    (`creaLezione`, `creaCompito`, `creaValutazione`). **Da popolare**
-    nel prossimo step.
+    `cercaStudente(String nome, String cognome) : Studente` (null se
+    assente; non gestisce omonimi, prende il primo),
+    `classiDi(Studente) : List<ClasseVirtuale>` (delega a
+    `cercaClassiPerUtente`). Stub futuri: `calcolaMediaStudente`,
+    `visualizzaLezioni`, `visualizzaCompiti`, `visualizzaValutazioni`.
+  - **`GestoreRegistroDocente.java`** — facade del flow docente, copre
+    sia ricerca/lettura sia persistenza:
+    - `cercaDocente(nome, cognome) : Docente`
+    - `classiDi(Docente) : List<ClasseVirtuale>` (delega a `cercaClassiPerUtente`)
+    - `cercaStudenti(ClasseVirtuale) : List<Studente>` (delega a
+      `cercaPerClasse`; serve per popolare la combo della Valutazione)
+    - `registraLezione(Lezione) : boolean` (delega a `salva`)
+    - `registraCompito(Compito) : boolean`
+    - `registraValutazione(Valutazione) : boolean`
+    Stub futuri: `mostraRegistro`, `monitoraAndamento`, `calcolaMediaClasse`.
+  - **`GestoreAggiornamentiRegistro.java`** — facade "creatore" del flow
+    docente (NON parla con `database/`, ha responsabilita' di sola
+    costruzione di Entity, oggi: wrap del costruttore; domani:
+    validazioni di dominio):
+    - `creaLezione(LocalDate, String, String, ClasseVirtuale) : Lezione`
+    - `creaCompito(String, LocalDate, String, LocalDate, ClasseVirtuale) : Compito`
+    - `creaValutazione(LocalDate, double, String, Tipologia, ClasseVirtuale, Studente) : Valutazione`
+
+  Nota: nessun facade espone piu' un `elencoClassi()` "global". La
+  filosofia e' che il facade non e' Information Expert delle
+  ClasseVirtuale globali — ritorna SOLO le classi rilevanti per uno
+  specifico utente (`classiDi(Studente)` / `classiDi(Docente)`).
+  Stessa filosofia per `cercaStudenti(ClasseVirtuale)`: rilevanti
+  rispetto a una specifica classe.
 
 ### `database/`
-- **`GestorePersistenza.java`** — file del professore (NON MODIFICARE).
-  Espone: `salva`, `salvaTutti`, `trovaPerId(Class, Long)`,
+- **`GestorePersistenza.java`** — file del professore (vedi sezione 2
+  per la regola attuale). Espone i metodi CRUD generici originali:
+  `salva`, `salvaTutti`, `trovaPerId(Class, Long)`,
   `cercaPerCampo(Class, String, Object)`,
   `cercaPerCampi(Class, Map)` — genera JPQL `SELECT e FROM <Classe> e
   WHERE e.<campo> = :<param>` per ogni voce della Map (Map vuota -> no
   WHERE, ritorna tutto), `cercaPrimoPerCampi`, `aggiorna`, `elimina`.
-  Apre/chiude `EntityManager` **dentro** ogni metodo.
+  **Aggiunte dall'utente (entrambe autorizzate)**:
+  - `cercaClassiPerUtente(Utente) : List<ClasseVirtuale>` — JPQL ad hoc
+    che parte da `ClasseVirtuale` e filtra su `c.docenteReferente = :utente`
+    (caso Docente) oppure `JOIN c.studentiIscritti s WHERE s = :utente`
+    (caso Studente, M2M).
+  - `cercaPerClasse(ClasseVirtuale) : List<Studente>` — JPQL `SELECT s
+    FROM Studente s JOIN s.classi c WHERE c = :classe`. Direzione
+    inversa: dato una classe, restituisce gli studenti iscritti.
+    Necessario perche' `classe.getStudentiIscritti()` e' LAZY e
+    `cercaPerCampi` non filtra su collezioni.
+  Entrambi i metodi aprono/chiudono l'`EntityManager` dentro al corpo,
+  come tutti gli altri.
 - **`JpaUtil.java`** — singleton dell'`EntityManagerFactory`.
 
 ### `setup/`, `resources/META-INF/persistence.xml`
@@ -258,18 +355,16 @@ bottoni.
    chiamando `avvia()`.
 2. `GestoreServiziStudente.avvia()`:
    1. Crea `FormServiziStudente` e lo mette in un `JFrame` 500x400,
-      `EXIT_ON_CLOSE`, centrato, titolo "Accesso Studente".
+      `EXIT_ON_CLOSE`, centrato, titolo "Accesso Studente". Il form
+      espone solo i campi nome+cognome+errore+conferma (niente combo
+      classi).
    2. Istanzia il facade: `GestoreVisualizzazione gv = new
       GestoreVisualizzazione();`. **E' l'unico punto del flow studente
-      che dialoga con la persistenza.**
-   3. `List<ClasseVirtuale> classi = gv.elencoClassi();` — sotto il
-      cofano: `gestorePersistenza.cercaPerCampi(ClasseVirtuale.class,
-      Map.of())` -> `SELECT e FROM ClasseVirtuale e`. L'`EntityManager`
-      viene aperto e chiuso dentro `cercaPerCampi`.
-   4. `form.setClassi(classi)` — popola la `JComboBox` (rendering via
-      `ClasseVirtuale.toString()` -> `getNome()`).
-   5. `form.addConfermaListener(...)` — registra il listener "Conferma".
-   6. `frame.setVisible(true)`.
+      che dialoga con la persistenza.** Non si fa alcuna query
+      "preventiva" qui: il DB viene interrogato solo dopo il click
+      Conferma.
+   3. `form.addConfermaListener(...)` — registra il listener "Conferma".
+   4. `frame.setVisible(true)`.
 
 **6.2.2 Click su "Conferma" (validazione + ricerca studente)**
 
@@ -277,31 +372,40 @@ Trigger: click su `buttonConferma`.
 
 1. `form.pulisciErrore()` — resetta la `labelErrore` (lo spazio resta
    occupato perche' inizializzato a `" "`).
-2. Letture dal form: `classeSelezionata = form.getClasseSelezionata()`,
-   `nome = form.getNomeInserito()` (gia' `trim()`), `cognome =
-   form.getCognomeInserito()`.
-3. **Guardia 1**: se `classeSelezionata == null` (caso possibile solo se
-   il DB non ha classi -> combo vuota) -> `mostraErrore("Selezionare una
-   classe")` + return.
-4. **Guardia 2**: se `nome.isEmpty() || cognome.isEmpty()` ->
+2. Letture dal form: `nome = form.getNomeInserito()` (gia' `trim()`),
+   `cognome = form.getCognomeInserito()`.
+3. **Guardia 1**: se `nome.isEmpty() || cognome.isEmpty()` ->
    `mostraErrore("Inserire nome e cognome")` + return.
-5. `Studente studente = gv.cercaStudenteInClasse(nome, cognome,
-   classeSelezionata);` — sotto il cofano:
-   1. `cercaPerCampi(Studente.class, Map.of("nome", nome, "cognome",
-      cognome))` -> filtra al DB per nome+cognome (campi semplici,
-      uguaglianza esatta case-sensitive).
-   2. Filtra in Java: `for (Studente s : candidati) if
-      (s.getClassi().contains(classe)) return s;`. Funziona perche':
-      - `Studente.classi` e' `@ManyToMany(fetch = FetchType.EAGER)` ->
-        la collezione e' gia' popolata fuori dall'`EntityManager`.
-      - `ClasseVirtuale.equals/hashCode` sono overridati sull'`id` ->
-        `contains(classe)` funziona anche tra entity caricate da
-        `EntityManager` diversi.
-6. **Guardia 3**: se `studente == null` -> `mostraErrore("Studente non
+4. `Studente studente = gv.cercaStudente(nome, cognome);` — sotto il
+   cofano: `cercaPrimoPerCampi(Studente.class, Map.of("nome", nome,
+   "cognome", cognome))`. Non gestiamo omonimi (prendiamo il primo).
+5. **Guardia 2**: se `studente == null` -> `mostraErrore("Studente non
    trovato")` + return.
-7. `frame.dispose()` + `apriProfilo(studente, classeSelezionata)`.
+6. `List<ClasseVirtuale> classi = gv.classiDi(studente);` — sotto il
+   cofano: `gestorePersistenza.cercaClassiPerUtente(studente)` -> JPQL
+   `SELECT c FROM ClasseVirtuale c JOIN c.studentiIscritti s WHERE s =
+   :utente`. Una sola query, niente filtro Java.
+7. **Guardia 3**: se `classi.isEmpty()` -> `mostraErrore("Nessuna classe
+   associata a questo studente")` + return.
+8. `apriSceltaClasse(frame, studente, classi);` — apre il popup.
 
-**6.2.3 Apertura profilo (`apriProfilo`)**
+**6.2.3 Scelta classe (`apriSceltaClasse`)**
+
+1. `FormSceltaClasse form = new FormSceltaClasse(); form.setClassi(classi);`
+2. `JDialog dialog = new JDialog(parent, "Seleziona Classe",
+   APPLICATION_MODAL);` — modale rispetto al frame di login. `setSize`
+   420x240, `setLocationRelativeTo(parent)`, `DISPOSE_ON_CLOSE` (la X
+   chiude solo il dialog, non l'app — differenza intenzionale rispetto
+   ai `JFrame` del progetto che fanno `EXIT_ON_CLOSE`).
+3. `form.addConfermaListener(e -> { scelta = form.getClasseSelezionata();
+   dialog.dispose(); parent.dispose(); apriProfilo(studente, scelta); });`
+4. `form.addAnnullaListener(e -> dialog.dispose());` — solo chiude il
+   dialog, il frame di login resta a disposizione per riprovare.
+5. `dialog.setVisible(true);` — bloccante. Il flow del Controller resta
+   fermo qui finche' non parte un dispose dal listener (Conferma o
+   Annulla o X).
+
+**6.2.4 Apertura profilo (`apriProfilo`)**
 
 1. `FormVisualizzazioneProfilo profilo = new
    FormVisualizzazioneProfilo();` — costruisce il pannello con
@@ -322,9 +426,10 @@ Trigger: click su `buttonConferma`.
 
 **Trigger**: click su "Docente" in `FormSceltaUtente`.
 
-Speculare al flow studente, con due differenze sostanziali nell'esito
-del login (cerca un `Docente`, non uno `Studente`) e nella schermata
-finale (gestione registro con toggle, non profilo).
+Speculare al flow studente: stessa struttura a tre fasi (login →
+popup scelta classe → schermata finale). Differenze: ricerca un
+`Docente` invece di uno `Studente`, e la schermata finale e' la
+gestione registro con toggle (non il profilo).
 
 **6.3.1 Apertura del login docente**
 
@@ -332,39 +437,37 @@ finale (gestione registro con toggle, non profilo).
    `new GestoreServiziDocente().avvia()`.
 2. `GestoreServiziDocente.avvia()`:
    1. Crea `FormServiziDocente` (titolo "Accesso Docente") in un
-      `JFrame` 500x400 `EXIT_ON_CLOSE`.
+      `JFrame` 500x400 `EXIT_ON_CLOSE`. Form: solo nome+cognome+errore.
    2. Istanzia `GestoreRegistroDocente gr = new
       GestoreRegistroDocente();` — facade unico per il flow docente.
-   3. `gr.elencoClassi()` -> popola la combo. (Sotto il cofano:
-      stessa query di `GestoreVisualizzazione.elencoClassi`, **duplicata
-      intenzionalmente** perche' ogni facade copre un caso d'uso ed e'
-      autonomo. In futuro la "lista classi visibili al docente"
-      potrebbe diventare "solo le sue classi", e il flow studente non
-      verrebbe impattato.)
-   4. Registra il listener Conferma e `frame.setVisible(true)`.
+   3. Registra il listener Conferma e `frame.setVisible(true)`.
 
 **6.3.2 Click su "Conferma" (validazione + ricerca docente)**
 
-Stesse 3 guardie del flow studente, poi:
+1. `pulisciErrore()`, lettura `nome`/`cognome`.
+2. Guardia: se `nome.isEmpty() || cognome.isEmpty()` ->
+   `mostraErrore("Inserire nome e cognome")` + return.
+3. `Docente docente = gr.cercaDocente(nome, cognome);` — sotto il
+   cofano: `cercaPrimoPerCampi(Docente.class, Map.of("nome", nome,
+   "cognome", cognome))`. Niente omonimi.
+4. Guardia: se `docente == null` -> `mostraErrore("Docente non
+   trovato")` + return.
+5. `List<ClasseVirtuale> classi = gr.classiDi(docente);` — JPQL
+   `SELECT c FROM ClasseVirtuale c WHERE c.docenteReferente = :utente`
+   (caso piu' semplice del JOIN, perche' la FK e' diretta).
+6. Guardia: se `classi.isEmpty()` -> `mostraErrore("Nessuna classe
+   associata a questo docente")` + return.
+7. `apriSceltaClasse(frame, docente, classi);` — popup modale identico
+   per struttura al flow studente; su Conferma chiude tutto e chiama
+   `apriGestioneRegistro(docente, scelta)`, su Annulla chiude solo il
+   dialog.
 
-1. `Docente docente = gr.cercaDocenteDiClasse(nome, cognome,
-   classeSelezionata);` — sotto il cofano:
-   1. `cercaPerCampi(Docente.class, Map.of("nome", nome, "cognome",
-      cognome))` -> candidati al DB.
-   2. `Docente referente = classe.getDocenteReferente();` —
-      accessibile fuori dall'`EntityManager` perche'
-      `ClasseVirtuale.docenteReferente` e' `@ManyToOne` (EAGER di
-      default in JPA).
-   3. Per ciascun candidato: `if (d.equals(referente)) return d;`.
-      Funziona perche' `Docente.equals` e' overridato
-      (nome+cognome+email, case-insensitive — stesso pattern di
-      `Studente.equals`).
-2. Se `docente == null` -> `mostraErrore("Docente non trovato per
-   questa classe")`.
-3. Altrimenti `frame.dispose()` + `apriGestioneRegistro(docente,
-   classeSelezionata)`.
+**6.3.3 Scelta classe (`apriSceltaClasse`)**
 
-**6.3.3 Apertura gestione registro (`apriGestioneRegistro`)**
+Identico a 6.2.3, sostituendo `Studente` con `Docente` e
+`apriProfilo` con `apriGestioneRegistro`.
+
+**6.3.4 Apertura gestione registro (`apriGestioneRegistro`)**
 
 1. `FormGestioneRegistro form = new FormGestioneRegistro();`.
    Costruttore del Boundary:
@@ -387,7 +490,7 @@ Stesse 3 guardie del flow studente, poi:
    e' la root, non ha back).
 4. `frame.setVisible(true)`.
 
-**6.3.4 Switch del toggle (interno al Boundary)**
+**6.3.5 Switch del toggle (interno al Boundary)**
 
 Trigger: click su `toggleAggiorna` o `toggleConsulta`.
 
@@ -426,35 +529,59 @@ costruzione e' generica ma **non sa filtrare su collezioni**
 `e.classi = :classeSelezionata` darebbe JPQL non valido (servirebbe
 `MEMBER OF` o `JOIN`).
 
-Conseguenza: per filtrare su collezioni si usa il pattern **filtro DB
-sui campi semplici + filtro Java sulla collezione**, sfruttando:
+Per coprire il caso "dato un Utente, dammi le sue ClasseVirtuale" e'
+stato aggiunto **`cercaClassiPerUtente(Utente)`** (vedi sezione 5). La
+query JPQL e' specializzata sui due rami:
 
-1. **Fetch type adatto sulle relazioni necessarie**:
-   - `Studente.classi` e' stato esplicitamente cambiato a
-     `@ManyToMany(fetch = FetchType.EAGER)`. Ragione: dopo il
-     `cercaPerCampi` l'`EntityManager` e' chiuso; accedere a una
-     collezione `LAZY` fuori dalla sessione lancia
-     `LazyInitializationException`. Con `EAGER` la collezione e' gia'
-     inizializzata.
-   - `ClasseVirtuale.docenteReferente` e' `@ManyToOne` -> EAGER di
-     default in JPA -> nessuna modifica necessaria.
-   - Le altre collezioni di `ClasseVirtuale` (`lezioni`, `compiti`,
-     `valutazioni`, `studentiIscritti`) restano LAZY: non vengono
-     accedute fuori dall'`EntityManager` nei flow attuali.
-2. **`equals/hashCode` coerenti**:
-   - `ClasseVirtuale.equals/hashCode`: basati su `id`. Servono perche'
-     `Studente.getClassi().contains(classeSelezionata)` confronta entity
-     caricate da `EntityManager` diversi.
-   - `Docente.equals/hashCode`: basati su nome+cognome+email
-     (case-insensitive). Stesso pattern di `Studente.equals` per
-     coerenza tra le sotto-classi di `Utente`. Servono per
-     `d.equals(classe.getDocenteReferente())`.
+- **Docente**: `SELECT c FROM ClasseVirtuale c WHERE c.docenteReferente
+  = :utente` — la relazione e' `@ManyToOne` con FK fisica
+  `docente_id`, quindi e' filtraggio diretto su un campo.
+- **Studente**: `SELECT c FROM ClasseVirtuale c JOIN c.studentiIscritti
+  s WHERE s = :utente` — la relazione e' `@ManyToMany` (tabella
+  associativa `iscrizione`), serve un JOIN sulla collezione.
+
+In entrambi i casi si passa **l'entita' utente direttamente come
+parametro** (`setParameter("utente", utente)`): JPA confronta sull'id,
+non servono `nome`/`cognome` letterali. Una sola query DB, zero filtro
+Java.
+
+**Conseguenza sul login**: il pattern "filtro DB sui campi semplici +
+filtro Java sulla collezione" che era usato in precedenza per
+`cercaStudenteInClasse`/`cercaDocenteDiClasse` non e' piu' necessario.
+Il login ora fa: `cercaStudente`/`cercaDocente` per nome+cognome ->
+`classiDi(utente)` per la lista delle classi -> popup `FormSceltaClasse`
+per la scelta finale. La classe scelta dal popup e' garantita appartenere
+all'utente per costruzione (la lista popolata viene da `classiDi`),
+quindi non serve piu' validare a posteriori.
+
+**Mapping JPA rilevanti** (in piedi, alcuni "in eccesso" rispetto al
+fabbisogno corrente ma utili per accessi futuri fuori dall'`EntityManager`):
+
+- `ClasseVirtuale.docenteReferente` `@ManyToOne` -> EAGER di default.
+- `Studente.classi` `@ManyToMany(fetch = FetchType.EAGER)` —
+  esplicitamente EAGER. Non serve piu' al login attuale, ma rimane
+  EAGER in vista di accessi a `studente.getClassi()` fuori dalla
+  sessione (es. profilo arricchito).
+- `ClasseVirtuale.studentiIscritti`, `lezioni`, `compiti`, `valutazioni`
+  restano LAZY.
+- `ClasseVirtuale.equals/hashCode` su `id`: utile per `List.contains`
+  tra entity caricate da `EntityManager` diversi. Coerente con il fatto
+  che `cercaClassiPerUtente` ritorna entity gestite da un EM gia' chiuso.
+- `Studente.equals` / `Docente.equals` su nome+cognome+email
+  (case-insensitive): non strettamente usati dal login attuale (sostituiti
+  dalla logica del popup), ma in piedi per consistency e per gli use case
+  in cui un'entita' va confrontata con un'altra caricata altrove
+  (es. `Valutazione.getStudenteValutato().equals(studenteCorrente)`).
 
 **Limitazioni note** (accettate per il perimetro del progetto):
 
 - La ricerca per `nome`/`cognome` via `cercaPerCampi` e' **case-sensitive**
   (JPQL usa `=`). Se servira' case-insensitive nel login, andra'
   introdotto un nuovo metodo o normalizzazione.
+- **Omonimi non gestiti**: `cercaStudente`/`cercaDocente` usano
+  `cercaPrimoPerCampi` e prendono il primo match. Se nel DB esistono due
+  utenti con stesso nome+cognome, l'app sceglie arbitrariamente uno dei
+  due. Scelta esplicita per il perimetro didattico del progetto.
 - Le query girano sull'EDT: se i dataset crescessero, occorrerebbe
   spostarle su `SwingWorker`. Oggi non e' un problema.
 - `new GestorePersistenza()` viene istanziato dentro ogni facade. Stateless,
@@ -507,44 +634,82 @@ sui campi semplici + filtro Java sulla collezione**, sfruttando:
 
 **Infrastruttura**:
 - `app/MainAvviaApp` su EDT con dispatch a `GestoreServiziStudente` /
-  `GestoreServiziDocente`.
+  `GestoreServiziDocente`. Imposta `UIManager.setLookAndFeel(systemLookAndFeel)`
+  prima di `invokeLater` (su macOS attiva Aqua per il segmented control).
 - `database/persistence.xml` e `setup/MainSetupInsert` per popolare il DB.
 
 **Flow Studente — completo end-to-end**:
-- `FormSceltaUtente` -> `FormServiziStudente` -> login con validazione
-  -> `FormVisualizzazioneProfilo` (placeholder con label).
-- Back nel profilo riporta al login.
+- `FormSceltaUtente` -> `FormServiziStudente` (solo nome+cognome) ->
+  popup modale `FormSceltaClasse` (solo le classi dello studente) ->
+  `FormVisualizzazioneProfilo` (placeholder con label).
+- Back nel profilo riporta al login. Annulla nel popup torna al login.
 
-**Flow Docente — fino al toggle**:
-- `FormSceltaUtente` -> `FormServiziDocente` -> login con validazione
-  -> `FormGestioneRegistro` con toggle funzionante e sotto-pannelli
-  placeholder.
-- Back nel registro riporta al login docente.
+**Flow Docente — login completo**:
+- `FormSceltaUtente` -> `FormServiziDocente` (solo nome+cognome) ->
+  popup modale `FormSceltaClasse` (solo le classi del docente) ->
+  `FormGestioneRegistro` con toggle Aggiorna/Consulta funzionante.
+- Back nel registro riporta al login docente. Annulla nel popup torna
+  al login.
+
+**Caso d'uso "Aggiorna Registro" — completo end-to-end** (tutti e 3
+i sotto-casi, vedi sezione 14 per il flow dettagliato):
+- Boundary: `FormAggiornaRegistro` (sub-toggle Lezione/Compito/Valutazione
+  + tre form di inserimento programmaticamente costruiti). Su macOS il
+  sub-toggle e' un segmented control nativo.
+- Lezione: form (data spinner, argomento, descrizione) + guardie su
+  argomento/descrizione + persistenza tramite il facade.
+- Compito: form (titolo, data assegnazione spinner, descrizione, data
+  scadenza spinner) + guardie su titolo/descrizione/scadenza>=assegnazione.
+- Valutazione: form (data spinner, voto spinner numerico 0-10 step 0.5,
+  descrizione, combo Tipologia da enum, combo Studente popolata via
+  `cercaStudenti(classe)` all'apertura) + guardie su studente!=null
+  e descrizione.
+- Controller: tre orchestratori privati `aggiornaRegistroLezione/Compito/
+  Valutazione` che fanno la catena "crea (facade A) + registra (facade B)"
+  e propagano boolean per feedback UI.
 
 **Entity tweaks effettuati**:
 - `ClasseVirtuale`: `toString()` (per render combo), `equals/hashCode`
   per id, getter `getDocenteReferente()`.
 - `Studente`: `@ManyToMany(fetch = FetchType.EAGER)` su `classi`,
-  `equals` per nome+cognome+email.
+  `equals` per nome+cognome+email, `toString()` ritorna `"Nome Cognome"`
+  (usato dalla combo studenti in Valutazione).
 - `Docente`: `equals/hashCode` per nome+cognome+email.
+- `Lezione`, `Compito`, `Valutazione`: campi data passati da `String`
+  a `LocalDate` (coerente con `JSpinner` + `SpinnerDateModel` lato UI).
 
-**Facade pronti**:
-- `GestoreVisualizzazione` -> `elencoClassi`, `cercaStudenteInClasse`.
-- `GestoreRegistroDocente` -> `elencoClassi`, `cercaDocenteDiClasse`.
+**Persistenza estesa**:
+- `database/GestorePersistenza` arricchito (dall'utente, due estensioni
+  autorizzate):
+  - `cercaClassiPerUtente(Utente)` per "Utente -> classi"
+  - `cercaPerClasse(ClasseVirtuale)` per "Classe -> studenti"
+
+**Facade aggiornati**:
+- `GestoreVisualizzazione`: `cercaStudente`, `classiDi(Studente)`.
+- `GestoreRegistroDocente`: `cercaDocente`, `classiDi(Docente)`,
+  `cercaStudenti(ClasseVirtuale)`, `registraLezione/Compito/Valutazione`.
+- `GestoreAggiornamentiRegistro`: `creaLezione/Compito/Valutazione`
+  (creatore di Entity, niente DB).
 
 ---
 
 ## 10. Cosa rimane
 
-**Prossimo step concordato**: implementare i due casi d'uso del docente
-dentro `FormGestioneRegistro` (oggi placeholder):
+**Prossimo step concordato**: implementare il secondo caso d'uso del
+docente:
 
-- **Aggiorna Registro**: form di inserimento per `Compito` / `Lezione`
-  / `Valutazione` da aggiungere alla classe scelta. Verra' delegato a
-  `GestoreAggiornamentiRegistro` (facade gia' presente, stub).
 - **Consulta Registro**: visualizzazione (probabilmente liste/tabelle)
   di Lezione/Compito/Valutazione della classe. Verra' delegato a
-  `GestoreRegistroDocente` (espandendo metodi come `mostraRegistro`).
+  `GestoreRegistroDocente` (espandendo metodi come `mostraRegistro`,
+  `monitoraAndamento`, `calcolaMediaClasse`).
+
+**Step ulteriori (oltre il flow docente)**:
+
+- Profilo studente reale: voti, lezioni, compiti, calcolo medie. Verra'
+  delegato a `GestoreVisualizzazione` (`calcolaMediaStudente`,
+  `visualizzaLezioni`, `visualizzaCompiti`, `visualizzaValutazioni` —
+  oggi stub).
+- Eventuale autenticazione vera (password): non in scope, da decidere.
 
 **Step successivi (oltre il toggle)**:
 
@@ -569,7 +734,26 @@ dentro `FormGestioneRegistro` (oggi placeholder):
   Idiomatic per "elenca tutto".
 - `cercaPerCampi` con campo che e' una collezione (`@OneToMany`,
   `@ManyToMany`) -> JPQL non valido. **Non si puo' fare**, serve
-  filtro Java post-query.
+  un metodo ad hoc (vedi `cercaClassiPerUtente` per il caso
+  Utente -> classi) oppure un filtro Java post-query.
+- **JPQL vs SQL**: in JPQL si naviga su attributi Java
+  (`c.docenteReferente`), NON su colonne fisiche (`c.docente_id`).
+  Quel tipo di errore e' stato sbagliato a freddo in una sessione e
+  scoperto in revisione: i nomi delle colonne nel DB JPA li risolve da
+  solo dal mapping.
+- **JPQL parametri**: passare l'entita' direttamente
+  (`setParameter("utente", utente)`) e confrontare con `=` funziona
+  (JPA usa l'id). Niente concatenazione di stringhe nella query
+  (rischio SQL injection + brutto).
+- **JDialog vs JFrame**: tutti i `JFrame` del progetto usano
+  `EXIT_ON_CLOSE` (X chiude la JVM). `FormSceltaClasse` invece e' un
+  `JDialog` `DISPOSE_ON_CLOSE`: la X chiude solo il dialog. Scelta
+  intenzionale, riflette il fatto che il dialog e' una sotto-scelta
+  rispetto al login.
+- **Modalita' del dialog**: il `FormSceltaClasse` e' istanziato con
+  `Dialog.ModalityType.APPLICATION_MODAL`. `setVisible(true)` blocca
+  l'EDT del Controller finche' i listener del dialog non chiamano
+  `dispose()`. Il flow del Controller riprende dopo `setVisible`.
 - `getNomeInserito()` / `getCognomeInserito()` nei form fanno gia'
   `.trim()` -> nel Controller usare direttamente `.isEmpty()`.
 - `BorderFactory.createTitledBorder(null, "", ...)` puo' apparire nel
@@ -584,8 +768,11 @@ dentro `FormGestioneRegistro` (oggi placeholder):
 
 ## 12. Files explicitly NOT to touch
 
-- `database/GestorePersistenza.java` — file del professore, vincolo
-  esplicito dell'utente.
+- `database/GestorePersistenza.java` — file del professore. I metodi
+  CRUD generici originali (vedi sezione 2) NON vanno modificati.
+  L'utente ha autorizzato esplicitamente DUE estensioni
+  (`cercaClassiPerUtente`, `cercaPerClasse`); ulteriori estensioni
+  richiedono nuova autorizzazione esplicita.
 - `database/JpaUtil.java` — fuori scope (utility JPA, modifiche
   rischiano di rompere la persistenza).
 - `setup/*` — fuori scope (popolamento DB iniziale).
@@ -596,8 +783,203 @@ dentro `FormGestioneRegistro` (oggi placeholder):
 ## 13. Ordine di lettura consigliato per un nuovo collaboratore
 
 1. Sezione 1 (Dominio) e 4 (BCED) per il contesto.
-2. Sezione 6 (Flow end-to-end) per capire cosa fa l'applicazione.
-3. Sezione 7 (Persistenza) per capire **perche'** ci sono `EAGER`,
-   `equals` per id, filtro Java post-query (e' il punto piu' delicato).
-4. Sezione 5 (Mappa file) come riferimento mentre si naviga il codice.
-5. Sezioni 10, 11, 12 prima di pianificare un nuovo task.
+2. Sezione 6 (Flow end-to-end) per la sequenza dei click utente.
+3. Sezione 14 (Casi d'uso) per il dettaglio della catena BCED in ogni
+   caso d'uso implementato (e' il "perche'" delle scelte nei tre layer).
+4. Sezione 7 (Persistenza) per capire **perche'** ci sono `EAGER`,
+   `equals` per id, JOIN ad hoc (e' il punto piu' delicato del progetto).
+5. Sezione 5 (Mappa file) come riferimento mentre si naviga il codice.
+6. Sezioni 10, 11, 12 prima di pianificare un nuovo task.
+
+---
+
+## 14. Casi d'uso (Flow di eventi dettagliato)
+
+Per ogni caso d'uso implementato: attore, precondizioni, catena BCED
+percorsa, flusso principale numerato, guardie/eccezioni, esito.
+
+### UC1 — Accesso al sistema (Studente)
+
+- **Attore**: Studente.
+- **Precondizione**: lo Studente esiste nel DB ed e' iscritto ad almeno
+  una `ClasseVirtuale`.
+- **Catena BCED**:
+  `FormSceltaUtente` -> `GestoreServiziStudente.avvia()` ->
+  `GestoreVisualizzazione.cercaStudente` -> `GestoreVisualizzazione.classiDi` ->
+  `FormSceltaClasse` (modale) -> `FormVisualizzazioneProfilo`.
+
+**Flusso principale**:
+
+1. Studente clicca "Studente" su `FormSceltaUtente`.
+2. `MainAvviaApp` chiude la finestra di scelta e chiama
+   `new GestoreServiziStudente().avvia()`.
+3. Il Controller apre `FormServiziStudente` (campi nome+cognome).
+4. Studente inserisce dati, clicca "Conferma".
+5. Controller legge i campi, applica guardie.
+6. Controller chiama `gestoreVisualizzazione.cercaStudente(nome, cognome)`.
+7. Controller chiama `gestoreVisualizzazione.classiDi(studente)`.
+8. Controller apre `FormSceltaClasse` come `JDialog` modale, popolata
+   con la lista delle classi.
+9. Studente seleziona una classe, clicca "Conferma".
+10. Controller chiude dialog + frame login, chiama `apriProfilo(studente, classe)`.
+11. `FormVisualizzazioneProfilo` mostra "Profilo di Nome Cognome".
+
+**Guardie**:
+- G1 nome o cognome vuoti -> `mostraErrore("Inserire nome e cognome")`.
+- G2 studente non trovato -> `mostraErrore("Studente non trovato")`.
+- G3 nessuna classe associata -> `mostraErrore("Nessuna classe associata
+  a questo studente")`.
+- G4 Annulla / X nel dialog -> chiude solo il dialog, il login resta.
+
+**Esito**: il profilo dello studente e' aperto; Back riporta al login.
+
+---
+
+### UC2 — Accesso al sistema (Docente)
+
+- **Attore**: Docente.
+- **Precondizione**: il Docente esiste ed e' referente di almeno una
+  `ClasseVirtuale`.
+- **Catena BCED**:
+  `FormSceltaUtente` -> `GestoreServiziDocente.avvia()` ->
+  `GestoreRegistroDocente.cercaDocente` -> `GestoreRegistroDocente.classiDi` ->
+  `FormSceltaClasse` -> `FormGestioneRegistro` (con `FormAggiornaRegistro`
+  agganciato dentro).
+
+**Flusso principale**: analogo a UC1 sostituendo Studente con Docente
+e profilo con Gestione Registro. In aggiunta, all'apertura della
+gestione registro il Controller carica gli studenti della classe via
+`gestoreRegistroDocente.cercaStudenti(classe)` e li passa a
+`formAggiorna.setStudentiClasse(...)` (necessari a UC5).
+
+**Guardie**: speculari a UC1 (nome/cognome vuoti, docente non trovato,
+nessuna classe associata, Annulla nel dialog).
+
+**Esito**: `FormGestioneRegistro` aperto sulla classe scelta, con i
+toggle Aggiorna/Consulta. Il toggle Aggiorna mostra il
+`FormAggiornaRegistro` con sub-toggle Lezione (attivo) /Compito/Valutazione.
+
+---
+
+### UC3 — Aggiorna Registro: nuova Lezione
+
+- **Attore**: Docente autenticato su una classe.
+- **Precondizione**: UC2 completato; toggle "Aggiorna Registro" e
+  sub-toggle "Lezione" attivi (sub-toggle Lezione e' lo stato iniziale).
+- **Catena BCED**:
+  `FormAggiornaRegistro` -> `GestoreServiziDocente.aggiornaRegistroLezione`
+  -> `GestoreAggiornamentiRegistro.creaLezione` (Entity)
+  -> `GestoreRegistroDocente.registraLezione`
+  -> `GestorePersistenza.salva`.
+
+**Flusso principale**:
+
+1. Docente compila i campi: data (`JSpinner` con `SpinnerDateModel`,
+   default oggi), argomento (`JTextField`), descrizione (`JTextField`).
+2. Docente clicca "Salva".
+3. Boundary notifica il click al listener registrato dal Controller in
+   `apriGestioneRegistro`.
+4. Controller chiama `formAggiorna.pulisciMessaggioLezione()`.
+5. Controller legge i tre campi via `getDataLezione()` (converte
+   `Date -> LocalDate` con `ZoneId.systemDefault()`),
+   `getArgomentoLezione()`, `getDescrizioneLezione()`.
+6. Controller applica le guardie.
+7. Controller chiama l'orchestratore privato
+   `aggiornaRegistroLezione(classe, data, argomento, descrizione)`.
+8. L'orchestratore: `gestoreAggiornamenti.creaLezione(...)` -> nuova
+   `Lezione` in memoria; `gestoreRegistroDocente.registraLezione(lezione)`
+   -> `gestorePersistenza.salva(lezione)` -> boolean.
+9. Su esito ok: `formAggiorna.mostraSuccessoLezione("Lezione registrata")`
+   + `pulisciCampiLezione()` (spinner a oggi, text field vuoti).
+10. Su esito ko: `formAggiorna.mostraErroreLezione("Errore durante il salvataggio")`.
+
+**Guardie**:
+- G1 argomento vuoto -> "Inserire l'argomento trattato".
+- G2 descrizione vuota -> "Inserire una descrizione".
+- Niente guardia sulla data: `SpinnerDateModel` garantisce sempre un
+  valore valido per costruzione.
+
+**Esito**: nuova riga in tabella `lezione` con `classe_id` corretto.
+
+---
+
+### UC4 — Aggiorna Registro: nuovo Compito
+
+- **Attore**: Docente autenticato su una classe.
+- **Precondizione**: UC2 completato; sub-toggle "Compito" attivo.
+- **Catena BCED**: come UC3, sostituendo `creaLezione`/`registraLezione`
+  con `creaCompito`/`registraCompito`.
+
+**Flusso principale**: analogo a UC3 con 4 campi (titolo, data
+assegnazione, descrizione, data scadenza). L'orchestratore e'
+`aggiornaRegistroCompito(classe, titolo, dataAss, descrizione, dataScad)`.
+
+**Guardie**:
+- G1 titolo vuoto -> "Inserire il titolo del compito".
+- G2 descrizione vuota -> "Inserire una descrizione".
+- G3 `dataScadenza.isBefore(dataAssegnazione)` -> "La scadenza non puo'
+  essere prima dell'assegnazione".
+
+**Esito**: nuova riga in `compito`.
+
+---
+
+### UC5 — Aggiorna Registro: nuova Valutazione
+
+- **Attore**: Docente autenticato su una classe.
+- **Precondizione**: UC2 completato; sub-toggle "Valutazione" attivo;
+  la combo studenti e' stata popolata all'apertura del registro
+  (vedi UC2, step "carica studenti").
+- **Catena BCED**:
+  `FormAggiornaRegistro` -> `GestoreServiziDocente.aggiornaRegistroValutazione`
+  -> `GestoreAggiornamentiRegistro.creaValutazione`
+  -> `GestoreRegistroDocente.registraValutazione`
+  -> `GestorePersistenza.salva`.
+
+**Flusso principale**:
+
+1. Docente compila: data (`JSpinner` data), voto (`JSpinner` numerico
+   con `SpinnerNumberModel(6.0, 0.0, 10.0, 0.5)`), descrizione,
+   tipologia (`JComboBox<Tipologia>` da `Tipologia.values()`), studente
+   (`JComboBox<Studente>` popolata via `setStudentiClasse`; usa
+   `Studente.toString()` per "Nome Cognome", niente renderer custom).
+2. Docente clicca "Salva".
+3. Listener: `pulisciMessaggioValutazione`, lettura campi, guardie.
+4. Orchestratore `aggiornaRegistroValutazione(classe, data, voto,
+   descrizione, tipologia, studente)`: crea via facade A, persiste via
+   facade B, ritorna boolean.
+5. Feedback verde/rosso + `pulisciCampiValutazione` (data oggi, voto 6.0,
+   descrizione vuota; combo Tipologia e Studente NON resettate per
+   ergonomia: di solito si valutano piu' studenti della stessa classe
+   in fila).
+
+**Guardie**:
+- G1 `studente == null` -> "Nessuno studente da valutare (la classe non
+  ha iscritti)". Copre il caso in cui `cercaStudenti(classe)` ha tornato
+  lista vuota.
+- G2 descrizione vuota -> "Inserire una descrizione".
+- Niente guardia su voto (range del `SpinnerNumberModel`), data (spinner
+  sempre valido), tipologia (combo da enum, mai null).
+
+**Esito**: nuova riga in `valutazione` con `classe_id` e `studente_id`
+corretti.
+
+---
+
+### UC6 — Consulta Registro
+
+**Non ancora implementato.** Toggle "Consulta Registro" presente in
+`FormGestioneRegistro`, ma il sotto-pannello e' un placeholder. Verra'
+delegato a `GestoreRegistroDocente` (metodi stub: `mostraRegistro`,
+`monitoraAndamento`, `calcolaMediaClasse`).
+
+---
+
+### UC7 — Visualizzazione Profilo Studente (placeholder)
+
+**Implementato a livello UI ma con contenuto placeholder.**
+`FormVisualizzazioneProfilo` mostra solo "Profilo di Nome Cognome".
+L'arricchimento del profilo (medie, lezioni, compiti, valutazioni
+dello studente) e' uno step successivo, delegato a
+`GestoreVisualizzazione` (stub `calcolaMediaStudente`,
+`visualizzaLezioni`, `visualizzaCompiti`, `visualizzaValutazioni`).

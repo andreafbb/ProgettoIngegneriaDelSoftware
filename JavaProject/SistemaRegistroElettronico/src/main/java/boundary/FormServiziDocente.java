@@ -2,16 +2,13 @@ package boundary;
 
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
-import entity.ClasseVirtuale;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionListener;
-import java.util.List;
 
 public class FormServiziDocente {
     private JPanel panel1;
-    private JComboBox<ClasseVirtuale> comboClasse;
     private JTextField fieldNome;
     private JTextField fieldCognome;
     private JLabel labelErrore;
@@ -19,18 +16,6 @@ public class FormServiziDocente {
 
     public JComponent getPanel() {
         return panel1;
-    }
-
-    public void setClassi(List<ClasseVirtuale> classi) {
-        DefaultComboBoxModel<ClasseVirtuale> model = new DefaultComboBoxModel<>();
-        for (ClasseVirtuale c : classi) {
-            model.addElement(c);
-        }
-        comboClasse.setModel(model);
-    }
-
-    public ClasseVirtuale getClasseSelezionata() {
-        return (ClasseVirtuale) comboClasse.getSelectedItem();
     }
 
     public String getNomeInserito() {
@@ -75,29 +60,22 @@ public class FormServiziDocente {
         labelTitolo.setText("Accesso Docente");
         panel1.add(labelTitolo, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JPanel panel2 = new JPanel();
-        panel2.setLayout(new GridLayoutManager(3, 2, new Insets(0, 0, 0, 0), 15, 12));
+        panel2.setLayout(new GridLayoutManager(2, 2, new Insets(0, 0, 0, 0), 15, 12));
         panel1.add(panel2, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        final JLabel labelClasse = new JLabel();
-        labelClasse.setFont(new Font("SansSerif", Font.PLAIN, 14));
-        labelClasse.setText("Classe:");
-        panel2.add(labelClasse, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        comboClasse = new JComboBox();
-        comboClasse.setFont(new Font("SansSerif", Font.PLAIN, 14));
-        panel2.add(comboClasse, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel labelNome = new JLabel();
         labelNome.setFont(new Font("SansSerif", Font.PLAIN, 14));
         labelNome.setText("Nome:");
-        panel2.add(labelNome, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel2.add(labelNome, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         fieldNome = new JTextField();
         fieldNome.setFont(new Font("SansSerif", Font.PLAIN, 14));
-        panel2.add(fieldNome, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(250, 30), null, 0, false));
+        panel2.add(fieldNome, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(250, 30), null, 0, false));
         final JLabel labelCognome = new JLabel();
         labelCognome.setFont(new Font("SansSerif", Font.PLAIN, 14));
         labelCognome.setText("Cognome:");
-        panel2.add(labelCognome, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel2.add(labelCognome, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         fieldCognome = new JTextField();
         fieldCognome.setFont(new Font("SansSerif", Font.PLAIN, 14));
-        panel2.add(fieldCognome, new GridConstraints(2, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(250, 30), null, 0, false));
+        panel2.add(fieldCognome, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(250, 30), null, 0, false));
         labelErrore = new JLabel();
         labelErrore.setFont(new Font("SansSerif", Font.ITALIC, 13));
         labelErrore.setForeground(new Color(-65536));

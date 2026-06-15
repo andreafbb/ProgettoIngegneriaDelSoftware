@@ -2,6 +2,8 @@ package entity;
 
 import jakarta.persistence.*;
 
+import java.time.LocalDate;
+
 @Entity
 public class Compito {
 
@@ -10,9 +12,9 @@ public class Compito {
 	private Long id;
 
 	private String titolo;
-	private String dataDiAssegnazione;
+	private LocalDate dataDiAssegnazione;
 	private String descrizione;
-	private String dataDiScadenza;
+	private LocalDate dataDiScadenza;
 
 	@ManyToOne
 	@JoinColumn(name = "classe_id")
@@ -20,7 +22,7 @@ public class Compito {
 
 	protected Compito() {}
 
-	public Compito(String titolo, String dataDiAssegnazione, String descrizione, String dataDiScadenza, ClasseVirtuale classeVirtuale) {
+	public Compito(String titolo, LocalDate dataDiAssegnazione, String descrizione, LocalDate dataDiScadenza, ClasseVirtuale classeVirtuale) {
 		this.titolo = titolo;
 		this.dataDiAssegnazione = dataDiAssegnazione;
 		this.descrizione = descrizione;
@@ -32,7 +34,7 @@ public class Compito {
 		return titolo;
 	}
 
-	public String getDataDiAssegnazione() {
+	public LocalDate getDataDiAssegnazione() {
 		return dataDiAssegnazione;
 	}
 
@@ -40,7 +42,7 @@ public class Compito {
 		return descrizione;
 	}
 
-	public String getDataDiScadenza() {
+	public LocalDate getDataDiScadenza() {
 		return dataDiScadenza;
 	}
 

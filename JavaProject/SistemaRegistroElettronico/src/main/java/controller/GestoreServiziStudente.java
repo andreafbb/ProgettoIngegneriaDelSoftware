@@ -1,21 +1,24 @@
 package controller;
 
+import boundary.FormSceltaClasse;
 import boundary.FormServiziStudente;
 import boundary.FormVisualizzazioneProfilo;
 import entity.ClasseVirtuale;
 import entity.GestoreVisualizzazione;
 import entity.Studente;
 
+import javax.swing.JDialog;
 import javax.swing.JFrame;
+import java.awt.Dialog;
 import java.util.List;
 
 public class GestoreServiziStudente {
 
 	/*
 	 * Punto di ingresso del flow studente.
-	 * Apre FormServiziStudente in una nuova finestra, popola la combo
-	 * con le ClasseVirtuale e, al click su "Conferma", valida l'input
-	 * e (se lo studente esiste) apre il profilo.
+	 * Apre FormServiziStudente (solo nome+cognome), valida l'input e, se lo
+	 * studente esiste e ha almeno una classe, apre il popup FormSceltaClasse
+	 * con SOLO le sue classi (recuperate via GestoreVisualizzazione.classiDi).
 	 *
 	 * Tutto l'accesso al DB e' delegato a GestoreVisualizzazione (facade
 	 * in entity/): il controller non conosce JPQL ne' GestorePersistenza.
@@ -30,53 +33,65 @@ public class GestoreServiziStudente {
 		frame.setSize(500, 400);
 		frame.setLocationRelativeTo(null);
 
-		/*
-		Conversiamo col Facade nel package entity che copra il caso d'uso della
-		visualizzazione del profilo, per interrogarlo riguardo il database
-		 */
 		GestoreVisualizzazione gv = new GestoreVisualizzazione();
-
-		List<ClasseVirtuale> classi = gv.elencoClassi();
-		form.setClassi(classi);
 
 		form.addConfermaListener(e -> {
 
 			form.pulisciErrore();
 
-			/*
-			Prendo i dati inseriti nel form
-			 */
-			ClasseVirtuale classeSelezionata = form.getClasseSelezionata();
 			String nome = form.getNomeInserito();
 			String cognome = form.getCognomeInserito();
-
-			/*
-			Guardie a livello boundary per evitare errori in fase di inserimento
-			Se tutto va bene viene aperto il JPanel della Visualizzazione
-			 */
-
-			if (classeSelezionata == null) {
-				form.mostraErrore("Selezionare una classe");
-				return;
-			}
 
 			if (nome.isEmpty() || cognome.isEmpty()) {
 				form.mostraErrore("Inserire nome e cognome");
 				return;
 			}
 
-			Studente studente = gv.cercaStudenteInClasse(nome, cognome, classeSelezionata);
-
+			Studente studente = gv.cercaStudente(nome, cognome);
 			if (studente == null) {
 				form.mostraErrore("Studente non trovato");
 				return;
 			}
 
-			frame.dispose();
-			apriProfilo(studente, classeSelezionata);
+			List<ClasseVirtuale> classi = gv.classiDi(studente);
+			if (classi.isEmpty()) {
+				form.mostraErrore("Nessuna classe associata a questo studente");
+				return;
+			}
+
+			apriSceltaClasse(frame, studente, classi);
 		});
 
 		frame.setVisible(true);
+	}
+
+	/*
+	 * Mostra il popup FormSceltaClasse con la lista delle classi dello studente.
+	 * Il dialog e' modale rispetto al frame di login: blocca il flow finche'
+	 * l'utente sceglie o annulla. Su Conferma: chiude tutto e apre il profilo.
+	 * Su Annulla (o X): chiude solo il dialog e lascia il login a disposizione.
+	 */
+	private void apriSceltaClasse(JFrame parent, Studente studente, List<ClasseVirtuale> classi) {
+
+		FormSceltaClasse form = new FormSceltaClasse();
+		form.setClassi(classi);
+
+		JDialog dialog = new JDialog(parent, "Seleziona Classe", Dialog.ModalityType.APPLICATION_MODAL);
+		dialog.setContentPane(form.getPanel());
+		dialog.setSize(420, 240);
+		dialog.setLocationRelativeTo(parent);
+		dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+
+		form.addConfermaListener(e -> {
+			ClasseVirtuale scelta = form.getClasseSelezionata();
+			dialog.dispose();
+			parent.dispose();
+			apriProfilo(studente, scelta);
+		});
+
+		form.addAnnullaListener(e -> dialog.dispose());
+
+		dialog.setVisible(true);
 	}
 
 	/*
@@ -95,8 +110,8 @@ public class GestoreServiziStudente {
 		frame.setLocationRelativeTo(null);
 
 		/*
-		Back -> chiudo il profilo e riapro la schermata di scelta studente
-		riusando avvia(): combo ripopolata da DB, campi vuoti.
+		Back -> chiudo il profilo e riapro il login studente
+		riusando avvia(): campi vuoti.
 		 */
 		profilo.addBackListener(e -> {
 			frame.dispose();

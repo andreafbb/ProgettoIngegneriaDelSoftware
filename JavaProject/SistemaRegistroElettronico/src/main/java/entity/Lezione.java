@@ -2,6 +2,8 @@ package entity;
 
 import jakarta.persistence.*;
 
+import java.time.LocalDate;
+
 @Entity
 public class Lezione {
 
@@ -9,7 +11,7 @@ public class Lezione {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	private String data;
+	private LocalDate data;
 	private String argomentoTrattato;
 	private String descrizione;
 
@@ -19,14 +21,14 @@ public class Lezione {
 
 	protected Lezione() {}
 
-	public Lezione(String data, String argomentoTrattato, String descrizione, ClasseVirtuale classeVirtuale) {
+	public Lezione(LocalDate data, String argomentoTrattato, String descrizione, ClasseVirtuale classeVirtuale) {
 		this.data = data;
 		this.argomentoTrattato = argomentoTrattato;
 		this.descrizione = descrizione;
 		this.classeVirtuale = classeVirtuale;
 	}
 
-	public String getData() {
+	public LocalDate getData() {
 		return data;
 	}
 
