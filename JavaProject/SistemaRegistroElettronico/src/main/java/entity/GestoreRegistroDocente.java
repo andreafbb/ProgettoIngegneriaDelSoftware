@@ -2,6 +2,8 @@ package entity;
 
 import database.GestorePersistenza;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -70,19 +72,67 @@ public class GestoreRegistroDocente {
 		return gestorePersistenza.salva(valutazione);
 	}
 
-	public void mostraRegistro() {
-		// TODO - implement entity.GestoreRegistroDocente.mostraRegistro
-		throw new UnsupportedOperationException();
+	/*
+	Metodi per l'accesso al database dei dati relativi al Registro di Classe
+	tramite Facade fornisco quindi i dati necessari al controller per popolare
+	l'interfaccia di Visualizzazione del profilo
+	 */
+
+	public List<Lezione> visualizzaLezioni(ClasseVirtuale classe) {
+		return gestorePersistenza.cercaPerCampo(Lezione.class, "classeVirtuale", classe);
 	}
 
-	public void monitoraAndamento() {
-		// TODO - implement entity.GestoreRegistroDocente.monitoraAndamento
-		throw new UnsupportedOperationException();
+	public List<Compito> visualizzaCompiti(ClasseVirtuale classe) {
+		return gestorePersistenza.cercaPerCampo(Compito.class, "classeVirtuale", classe);
 	}
 
-	public void calcolaMediaClasse() {
-		// TODO - implement entity.GestoreRegistroDocente.calcolaMediaClasse
-		throw new UnsupportedOperationException();
+	/*
+	Metodo che fornisce la lista delle valutazioni filtrate in un
+	intervallo temporale tra le due date richieste, restituisce
+	tutte le valutazioni della classe
+	 */
+	public List<Valutazione> visualizzaValutazioniConIntervallo(
+				ClasseVirtuale classe,
+				LocalDate da, LocalDate a) {
+		List<Valutazione> valutazioniClasse = gestorePersistenza.cercaPerCampo(
+				Valutazione.class,
+				"classeVirtuale", classe
+		);
+
+		List<Valutazione> valutazioniFiltrate = new ArrayList<>();
+
+		/*
+		Filtro per il range fornito in input
+		 */
+		for(Valutazione v : valutazioniClasse){
+			if(!v.getData().isBefore(da) && !v.getData().isAfter(a)){
+				valutazioniFiltrate.add(v);
+			}
+		}
+
+		return valutazioniFiltrate;
+	}
+
+	/*
+	Calcola la media delle valutazioni della classe.
+	Su lista vuota ritorna 0.0 per evitare la divisione 0/0 che
+	produrrebbe NaN: il Boundary mostrera' "Media: 0.00".
+	 */
+	public double calcolaMediaClasse(List<Valutazione> valutazioni) {
+		if (valutazioni.isEmpty()) {
+			return 0.0;
+		}
+
+		double somma = 0;
+		for (Valutazione v : valutazioni){
+			somma += v.getVoto();
+		}
+
+		/*
+		Verrà arrotondato poi quando verrà effettuato il parsing a String
+		nel Form, approssimandolo alla seconda cifra decimale
+		 */
+		return somma/valutazioni.size();
 	}
 
 }

@@ -42,24 +42,50 @@ public class GestoreVisualizzazione {
 		return gestorePersistenza.cercaClassiPerUtente(studente);
 	}
 
-	public void calcolaMediaStudente() {
-		// TODO - implement entity.GestoreVisualizzazione.calcolaMediaStudente
-		throw new UnsupportedOperationException();
+	/*
+	Calcola la media delle valutazioni dello studente.
+	Su lista vuota ritorna 0.0 per evitare la divisione 0/0 che
+	produrrebbe NaN: il Boundary mostrera' "Media: 0.00".
+	 */
+	public double calcolaMediaStudente(List<Valutazione> valutazioni) {
+		if (valutazioni.isEmpty()) {
+			return 0.0;
+		}
+
+		double somma = 0;
+		for (Valutazione v : valutazioni){
+			somma += v.getVoto();
+		}
+
+		/*
+		Verrà arrotondato poi quando verrà effettuato il parsing a String
+		nel Form, approssimandolo alla seconda cifra decimale
+		 */
+		return somma/valutazioni.size();
 	}
 
-	public void visualizzaLezioni() {
-		// TODO - implement entity.GestoreVisualizzazione.visualizzaLezioni
-		throw new UnsupportedOperationException();
+	/*
+	Metodi per l'accesso al database dei dati relativi al Registro di Classe
+	tramite Facade fornisco quindi i dati necessari al controller per popolare
+	l'interfaccia di Visualizzazione del profilo
+	 */
+
+	public List<Lezione> visualizzaLezioni(ClasseVirtuale classe) {
+		return gestorePersistenza.cercaPerCampo(Lezione.class, "classeVirtuale", classe);
 	}
 
-	public void visualizzaCompiti() {
-		// TODO - implement entity.GestoreVisualizzazione.visualizzaCompiti
-		throw new UnsupportedOperationException();
+	public List<Compito> visualizzaCompiti(ClasseVirtuale classe) {
+		return gestorePersistenza.cercaPerCampo(Compito.class, "classeVirtuale", classe);
 	}
 
-	public void visualizzaValutazioni() {
-		// TODO - implement entity.GestoreVisualizzazione.visualizzaValutazioni
-		throw new UnsupportedOperationException();
+	/*
+	Qua facciamo una ricerca filtrata sia per Studente che per la Classe
+	 */
+	public List<Valutazione> visualizzaValutazioni(Studente studente,ClasseVirtuale classe) {
+		return gestorePersistenza.cercaPerCampi(
+				Valutazione.class,
+				Map.of("studenteValutato", studente, "classeVirtuale", classe)
+		);
 	}
 
 }

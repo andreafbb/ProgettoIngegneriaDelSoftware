@@ -169,11 +169,26 @@ listener/setter elencati.
   API: `getPanel`, `setClassi(List<ClasseVirtuale>)`,
   `getClasseSelezionata`, `addConfermaListener(ActionListener)`,
   `addAnnullaListener(ActionListener)`.
-- **`FormVisualizzazioneProfilo.java`** (+ `.form`) — profilo studente.
-  Per ora: bottone "Indietro" (alto-sinistra, piccolo, 80x24) + label
-  centrata "Profilo di {Nome} {Cognome}".
-  API: `getPanel`, `mostraProfilo(Studente, ClasseVirtuale)`,
-  `addBackListener(ActionListener)`.
+- **`FormVisualizzazioneProfilo.java`** (+ `.form`) — profilo studente,
+  completo. Layout 4 righe: Back (alto-sinistra, 80x24), label nome
+  "Profilo di {Nome} {Cognome}" centrata (font 22 bold), sub-toggle bar
+  (Lezioni/Compiti/Valutazioni — identica per dimensioni/stile a quella
+  del docente: 95x22, font 11 bold, hgap 0, segmented client properties
+  per il look nativo macOS), e `panelContenuto` bordato che ospita
+  alternativamente uno di tre `JScrollPane` (uno per tipo) che avvolgono
+  altrettanti `JList<String>` sopra `DefaultListModel<String>`.
+  Switch interno al Boundary via `mostraSotto(JComponent)`.
+  **Trucco HTML per evitare un `ListCellRenderer` custom**: ogni elemento
+  del model e' una stringa che inizia con `<html>`; il `DefaultListCellRenderer`
+  e' un `JLabel` che la interpreta come HTML basico (`<b>`, `<i>`, `<br>`,
+  `<font color>`), ottenendo gratuitamente l'item multi-riga (titolo bold +
+  descrizione in italic grigio). Formattazione fatta dentro i setter del
+  Boundary (presentazione = responsabilita' del Boundary).
+  API: `getPanel`, `mostraProfilo(Studente, ClasseVirtuale)` (setta la
+  label nome), `addBackListener(ActionListener)`,
+  `setLezioni(List<Lezione>)` / `setCompiti(List<Compito>)` /
+  `setValutazioni(List<Valutazione>)` (clear del model + ciclo con
+  formattazione HTML degli item).
 - **`FormGestioneRegistro.java`** (+ `.form`) — schermata principale
   docente. Layout 3 righe: Back (alto-sinistra, piccolo), togglebar
   con 2 `JToggleButton` ("Aggiorna Registro" / "Consulta Registro"
@@ -218,12 +233,19 @@ listener/setter elencati.
 
 ### `controller/`
 - **`GestoreServiziStudente.java`** — orchestra il flow studente.
-  Metodi: `avvia()` (apre form login e gestisce conferma),
-  `apriSceltaClasse(JFrame parent, Studente, List<ClasseVirtuale>)`
-  (apre il `JDialog` modale `FormSceltaClasse` con le classi dello
-  studente, gestisce conferma/annulla),
-  `apriProfilo(Studente, ClasseVirtuale)` (apre il profilo e registra
-  il back). Stub: `visualizzaProfilo()`.
+  Campo istanza: `gv = new GestoreVisualizzazione()` (facade entity).
+  Metodi:
+  - `avvia()` (apre form login e gestisce conferma).
+  - `apriSceltaClasse(JFrame parent, Studente, List<ClasseVirtuale>)`
+    (apre il `JDialog` modale `FormSceltaClasse` con le classi dello
+    studente, gestisce conferma/annulla).
+  - `apriProfilo(Studente, ClasseVirtuale)` (apre il profilo, chiama
+    `mostraProfilo` per la label nome, poi `visualizzaProfilo(...)` per
+    popolare le 3 liste, registra il back, mostra il frame).
+  - `visualizzaProfilo(FormVisualizzazioneProfilo, Studente, ClasseVirtuale)`
+    privato — orchestratore della UC7: chiede al facade le 3 liste e le
+    pusha al Boundary tramite `setLezioni/Compiti/Valutazioni`. Il
+    Controller non vede mai `GestorePersistenza`.
 - **`GestoreServiziDocente.java`** — orchestra il flow docente. Campi
   istanza: `gestoreRegistroDocente` e `gestoreAggiornamenti` (i due
   facade dell'entity, istanziati una volta sola). Metodi:
@@ -254,11 +276,20 @@ listener/setter elencati.
   - **`GestoreVisualizzazione.java`** — facade del flow studente.
     Attributo `private final GestorePersistenza gestorePersistenza =
     new GestorePersistenza();`. Metodi attivi:
-    `cercaStudente(String nome, String cognome) : Studente` (null se
-    assente; non gestisce omonimi, prende il primo),
-    `classiDi(Studente) : List<ClasseVirtuale>` (delega a
-    `cercaClassiPerUtente`). Stub futuri: `calcolaMediaStudente`,
-    `visualizzaLezioni`, `visualizzaCompiti`, `visualizzaValutazioni`.
+    - `cercaStudente(String nome, String cognome) : Studente` (null se
+      assente; non gestisce omonimi, prende il primo).
+    - `classiDi(Studente) : List<ClasseVirtuale>` (delega a
+      `cercaClassiPerUtente`).
+    - `visualizzaLezioni(ClasseVirtuale) : List<Lezione>` — via
+      `cercaPerCampo(Lezione.class, "classeVirtuale", classe)`.
+    - `visualizzaCompiti(ClasseVirtuale) : List<Compito>` — via
+      `cercaPerCampo(Compito.class, "classeVirtuale", classe)`.
+    - `visualizzaValutazioni(Studente, ClasseVirtuale) : List<Valutazione>`
+      — via `cercaPerCampi(Valutazione.class, Map.of("studenteValutato",
+      studente, "classeVirtuale", classe))`. Filtro a 2 campi: serve per
+      isolare le valutazioni di un singolo studente in una specifica
+      classe (uno studente puo' essere iscritto a piu' classi).
+    Stub futuro: `calcolaMediaStudente`.
   - **`GestoreRegistroDocente.java`** — facade del flow docente, copre
     sia ricerca/lettura sia persistenza:
     - `cercaDocente(nome, cognome) : Docente`
@@ -641,7 +672,9 @@ fabbisogno corrente ma utili per accessi futuri fuori dall'`EntityManager`):
 **Flow Studente — completo end-to-end**:
 - `FormSceltaUtente` -> `FormServiziStudente` (solo nome+cognome) ->
   popup modale `FormSceltaClasse` (solo le classi dello studente) ->
-  `FormVisualizzazioneProfilo` (placeholder con label).
+  `FormVisualizzazioneProfilo` con label nome + sub-toggle a 3
+  (Lezioni/Compiti/Valutazioni) + liste scrollabili popolate dal
+  facade (vedi UC7).
 - Back nel profilo riporta al login. Annulla nel popup torna al login.
 
 **Flow Docente — login completo**:
@@ -650,6 +683,21 @@ fabbisogno corrente ma utili per accessi futuri fuori dall'`EntityManager`):
   `FormGestioneRegistro` con toggle Aggiorna/Consulta funzionante.
 - Back nel registro riporta al login docente. Annulla nel popup torna
   al login.
+
+**Caso d'uso "Visualizzazione Profilo Studente" — completo end-to-end**
+(vedi UC7 sez. 14 per il flow dettagliato):
+- Boundary: `FormVisualizzazioneProfilo` con sub-toggle Lezioni/Compiti/
+  Valutazioni + 3 `JList<String>` scrollabili. Item formattati come
+  stringhe HTML interpretate dal renderer di default (niente
+  `ListCellRenderer` custom).
+- Controller: `apriProfilo` chiama il privato `visualizzaProfilo(form,
+  studente, classe)` che chiede al facade le 3 liste e le pusha al
+  Boundary.
+- Facade: `gv.visualizzaLezioni/Compiti/Valutazioni` usano i metodi
+  CRUD generici originali del professore (`cercaPerCampo` su
+  `classeVirtuale` per Lezione/Compito, `cercaPerCampi` su
+  `studenteValutato`+`classeVirtuale` per Valutazione). Niente
+  estensioni di `GestorePersistenza` per questo caso d'uso.
 
 **Caso d'uso "Aggiorna Registro" — completo end-to-end** (tutti e 3
 i sotto-casi, vedi sezione 14 per il flow dettagliato):
@@ -703,12 +751,12 @@ docente:
   `GestoreRegistroDocente` (espandendo metodi come `mostraRegistro`,
   `monitoraAndamento`, `calcolaMediaClasse`).
 
-**Step ulteriori (oltre il flow docente)**:
+**Step ulteriori**:
 
-- Profilo studente reale: voti, lezioni, compiti, calcolo medie. Verra'
-  delegato a `GestoreVisualizzazione` (`calcolaMediaStudente`,
-  `visualizzaLezioni`, `visualizzaCompiti`, `visualizzaValutazioni` —
-  oggi stub).
+- Calcolo medie nel profilo studente: oggi le valutazioni si vedono
+  ma non c'e' una media. `calcolaMediaStudente` di `GestoreVisualizzazione`
+  e' ancora stub. Eventualmente da mostrare in testa al pannello
+  Valutazioni del profilo.
 - Eventuale autenticazione vera (password): non in scope, da decidere.
 
 **Step successivi (oltre il toggle)**:
@@ -975,11 +1023,57 @@ delegato a `GestoreRegistroDocente` (metodi stub: `mostraRegistro`,
 
 ---
 
-### UC7 — Visualizzazione Profilo Studente (placeholder)
+### UC7 — Visualizzazione Profilo Studente
 
-**Implementato a livello UI ma con contenuto placeholder.**
-`FormVisualizzazioneProfilo` mostra solo "Profilo di Nome Cognome".
-L'arricchimento del profilo (medie, lezioni, compiti, valutazioni
-dello studente) e' uno step successivo, delegato a
-`GestoreVisualizzazione` (stub `calcolaMediaStudente`,
-`visualizzaLezioni`, `visualizzaCompiti`, `visualizzaValutazioni`).
+- **Attore**: Studente autenticato su una classe.
+- **Precondizione**: UC1 completato; il profilo si apre subito dopo la
+  scelta classe.
+- **Catena BCED**:
+  `FormVisualizzazioneProfilo` <- `GestoreServiziStudente.visualizzaProfilo`
+  -> `GestoreVisualizzazione.visualizzaLezioni / visualizzaCompiti /
+  visualizzaValutazioni` -> `GestorePersistenza.cercaPerCampo /
+  cercaPerCampi`.
+
+**Flusso principale**:
+
+1. Subito dopo la scelta classe, `apriProfilo(studente, classe)` crea
+   il `FormVisualizzazioneProfilo` e chiama `mostraProfilo(studente,
+   classe)` (setta la label "Profilo di Nome Cognome").
+2. Sempre dentro `apriProfilo`, prima di rendere visibile il frame,
+   il Controller chiama l'orchestratore privato
+   `visualizzaProfilo(profilo, studente, classe)`.
+3. `visualizzaProfilo` interroga il facade:
+   - `gv.visualizzaLezioni(classe)` -> `cercaPerCampo(Lezione.class,
+     "classeVirtuale", classe)`.
+   - `gv.visualizzaCompiti(classe)` -> `cercaPerCampo(Compito.class,
+     "classeVirtuale", classe)`.
+   - `gv.visualizzaValutazioni(studente, classe)` ->
+     `cercaPerCampi(Valutazione.class, Map.of("studenteValutato",
+     studente, "classeVirtuale", classe))`. Filtro a 2 campi:
+     fondamentale perche' uno studente puo' essere iscritto a piu'
+     classi e vogliamo SOLO le valutazioni nella classe corrente.
+4. Le 3 liste vengono pushate al Boundary via `setLezioni`,
+   `setCompiti`, `setValutazioni`. Ognuno fa `model.clear()` + ciclo
+   con formattazione HTML degli item.
+5. `frame.setVisible(true)` -> la finestra si apre con le liste gia'
+   popolate. Toggle iniziale: Lezioni.
+
+**Rendering degli item (no `ListCellRenderer` custom)**:
+Ogni elemento del model e' una stringa HTML che inizia con `<html>`.
+Il renderer di default (`DefaultListCellRenderer extends JLabel`)
+interpreta i tag basici (`<b>`, `<i>`, `<br>`, `<font color>`),
+ottenendo item multi-riga con grassetto sulla prima e italic grigio
+sulla seconda. Formato per tipo:
+- Lezione: `<b>argomento — dd/MM/yyyy</b><br><i><font gray>descrizione</font></i>`
+- Compito: `<b>titolo — dd/MM/yyyy → dd/MM/yyyy</b><br><i>descrizione</i>` (freccia per chiarire assegnazione → scadenza)
+- Valutazione: `<b>X.Y — tipologia leggibile — dd/MM/yyyy</b><br><i>descrizione</i>` (voto con `%.1f`, tipologia da `PROVA_SCRITTA` a "prova scritta" via `name().toLowerCase().replace('_',' ')`)
+
+**Guardie**: nessuna. Se una lista e' vuota (es. lo studente non ha
+valutazioni in quella classe) il `JScrollPane` resta vuoto, niente
+errore.
+
+**Esito**: profilo aperto e popolato; Back riporta al login studente.
+
+**Limite onesto**: l'HTML del trucco non escapa `<`, `>`, `&` presenti
+nei testi dal DB. Per il perimetro didattico (dati controllati) e'
+accettabile.

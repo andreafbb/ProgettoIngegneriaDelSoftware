@@ -71,27 +71,9 @@ public class ClasseVirtuale {
 		return new ArrayList<>(this.lezioni);
 	}
 
-	/*
-	Fa una ricerca filtrata solo sullo Studente passato in input
-	 */
-	public List<Valutazione> getValutazioniStudente(Studente s) {
-
-		List<Valutazione> valutazioniStudente = new ArrayList<>();
-
-		for (Valutazione valutazione : valutazioni){
-			if(valutazione.getStudenteValutato().equals(s)){
-				valutazioniStudente.add(valutazione);
-			}
-		}
-
-		return  valutazioniStudente;
+	public String getNome() {
+		return this.nome;
 	}
-
-	public List<Valutazione> getValutazioniClasse() {
-		return new ArrayList<>(this.valutazioni);
-	}
-
-	public String getNome() { return this.nome; }
 
 
 	/*

@@ -3,9 +3,7 @@ package controller;
 import boundary.FormSceltaClasse;
 import boundary.FormServiziStudente;
 import boundary.FormVisualizzazioneProfilo;
-import entity.ClasseVirtuale;
-import entity.GestoreVisualizzazione;
-import entity.Studente;
+import entity.*;
 
 import javax.swing.JDialog;
 import javax.swing.JFrame;
@@ -13,6 +11,8 @@ import java.awt.Dialog;
 import java.util.List;
 
 public class GestoreServiziStudente {
+
+	private final GestoreVisualizzazione gv = new GestoreVisualizzazione();
 
 	/*
 	 * Punto di ingresso del flow studente.
@@ -32,8 +32,6 @@ public class GestoreServiziStudente {
 		frame.setContentPane(form.getPanel());
 		frame.setSize(500, 400);
 		frame.setLocationRelativeTo(null);
-
-		GestoreVisualizzazione gv = new GestoreVisualizzazione();
 
 		form.addConfermaListener(e -> {
 
@@ -103,6 +101,14 @@ public class GestoreServiziStudente {
 		FormVisualizzazioneProfilo profilo = new FormVisualizzazioneProfilo();
 		profilo.mostraProfilo(studente, classe);
 
+		/*
+		Prima di mostrare la finestra carico le tre liste dal facade e le
+		pusho nel form (vedi visualizzaProfilo poco sotto). Cosi' quando il
+		frame appare l'utente vede subito i dati riempire le JList,
+		niente "lampeggia vuoto poi si riempie".
+		 */
+		visualizzaProfilo(profilo, studente, classe);
+
 		JFrame frame = new JFrame("Profilo Studente");
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setContentPane(profilo.getPanel());
@@ -121,9 +127,28 @@ public class GestoreServiziStudente {
 		frame.setVisible(true);
 	}
 
-	public void visualizzaProfilo() {
-		// TODO - implement controller.GestoreServiziStudente.visualizzaProfilo
-		throw new UnsupportedOperationException();
+	/*
+	Tira fuori dal facade le tre liste (lezioni e compiti della classe,
+	valutazioni di QUESTO studente in QUELLA classe) e le pusha nel form,
+	che si occupera' poi di formattarle in HTML e popolare le JList.
+
+	BCED: io controller non parlo mai col database, lo fa solo gv (il
+	facade in entity/). Il Boundary riceve dati gia' pronti e non sa
+	nulla di chi glieli ha dati.
+	 */
+	private void visualizzaProfilo(FormVisualizzazioneProfilo profilo,
+	                               Studente studente, ClasseVirtuale classe) {
+
+		profilo.setLezioni(gv.visualizzaLezioni(classe));
+		profilo.setCompiti(gv.visualizzaCompiti(classe));
+
+		/*
+		Tengo la lista in una variabile per riusarla nel calcolo della
+		media: cosi' il facade non deve rifare il fetch al DB.
+		 */
+		List<Valutazione> valutazioni = gv.visualizzaValutazioni(studente, classe);
+		profilo.setValutazioni(valutazioni);
+		profilo.setMediaStudente(gv.calcolaMediaStudente(valutazioni));
 	}
 
 }

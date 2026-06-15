@@ -3,7 +3,10 @@ package boundary;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import entity.ClasseVirtuale;
+import entity.Compito;
+import entity.Lezione;
 import entity.Studente;
+import entity.Valutazione;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
@@ -11,43 +14,212 @@ import javax.swing.plaf.FontUIResource;
 import javax.swing.text.StyleContext;
 import java.awt.*;
 import java.awt.event.ActionListener;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Locale;
 
 /*
  * Form di visualizzazione del profilo studente.
  *
- * Per ora mostra solo una label "Profilo di Nome Cognome" e un bottone
- * "Indietro" per tornare alla schermata di selezione studente.
- * Verra' arricchita (voti, lezioni, compiti, ecc.) disegnando i nuovi
- * componenti direttamente nel .form via IntelliJ GUI Designer.
+ * In alto: bottone Indietro + label "Profilo di Nome Cognome".
+ * Sotto: una sub-toggle bar (Lezioni / Compiti / Valutazioni) identica
+ * a quella del docente, e un panelContenuto bordato che mostra
+ * alternativamente la lista (scrollabile) del tipo selezionato.
+ *
+ * Le 3 liste sono JList<String> sopra un DefaultListModel<String>: ogni
+ * elemento e' una stringa HTML che il renderer di default di Swing sa
+ * interpretare (multi-riga, grassetto, italic). Cosi' niente
+ * ListCellRenderer custom.
+ *
+ * Il Controller riempie le tre liste chiamando setLezioni / setCompiti /
+ * setValutazioni (vedi sotto): e' li' che facciamo la formattazione HTML
+ * di ogni item.
  */
 public class FormVisualizzazioneProfilo {
 
     private JPanel panel1;
     private JButton buttonBack;
     private JLabel labelProfilo;
+    private JToggleButton toggleLezioni;
+    private JToggleButton toggleCompiti;
+    private JToggleButton toggleValutazioni;
+    private JPanel panelContenuto;
+
+    /*
+     * Model + JList + JScrollPane per ognuna delle tre liste.
+     * Li inizializzo qui come final: ogni JList prende il proprio model,
+     * ogni JScrollPane avvolge la propria JList. Sono questi tre
+     * JScrollPane che il toggle inserisce dentro panelContenuto.
+     */
+    private final DefaultListModel<String> modelLezioni = new DefaultListModel<>();
+    private final DefaultListModel<String> modelCompiti = new DefaultListModel<>();
+    private final DefaultListModel<String> modelValutazioni = new DefaultListModel<>();
+
+    /*
+    Queste sono le liste che verranno gestite con HTML per avere il layout
+    ordinato (codice molto semplice)
+     */
+    private final JList<String> listLezioni = new JList<>(modelLezioni);
+    private final JList<String> listCompiti = new JList<>(modelCompiti);
+    private final JList<String> listValutazioni = new JList<>(modelValutazioni);
+
+    /*
+    Questi invece li useremo per scrollare gli elementi (Valutazioni in alto
+    avrà anche la media calcolata al momento
+     */
+    private final JScrollPane scrollLezioni = new JScrollPane(listLezioni);
+    private final JScrollPane scrollCompiti = new JScrollPane(listCompiti);
+    private final JScrollPane scrollValutazioni = new JScrollPane(listValutazioni);
+
+    /*
+     * Per le Valutazioni vogliamo mostrare la media in basso a destra,
+     * sempre visibile (non scrolla con la lista). Avvolgo lo scroll + la
+     * label in un container con BorderLayout: scroll al CENTER (prende
+     * tutto lo spazio), label al SOUTH allineata a destra.
+     *
+     * E' questo container, non lo scroll diretto, che il toggle
+     * Valutazioni inserisce dentro panelContenuto.
+     */
+    private final JLabel labelMedia = new JLabel("Media: 0.00", SwingConstants.RIGHT);
+    private final JPanel panelValutazioniContainer = new JPanel(new BorderLayout());
+
+    public FormVisualizzazioneProfilo() {
+
+        /*
+         * Stesso trucco del FormAggiornaRegistro: su macOS (Aqua) le
+         * client property segmented disegnano i tre toggle come un'unica
+         * barra a 3 segmenti. Su altri L&F vengono ignorate e i toggle
+         * restano normali (ma funzionali).
+         */
+        toggleLezioni.putClientProperty("JButton.buttonType", "segmented");
+        toggleLezioni.putClientProperty("JButton.segmentPosition", "first");
+        toggleCompiti.putClientProperty("JButton.buttonType", "segmented");
+        toggleCompiti.putClientProperty("JButton.segmentPosition", "middle");
+        toggleValutazioni.putClientProperty("JButton.buttonType", "segmented");
+        toggleValutazioni.putClientProperty("JButton.segmentPosition", "last");
+
+        ButtonGroup gruppo = new ButtonGroup();
+        gruppo.add(toggleLezioni);
+        gruppo.add(toggleCompiti);
+        gruppo.add(toggleValutazioni);
+
+        // Default: vista "Lezioni"
+        toggleLezioni.setSelected(true);
+        mostraSotto(scrollLezioni);
+
+        // Wiring del container Valutazioni: scroll sopra, label media sotto.
+        panelValutazioniContainer.add(scrollValutazioni, BorderLayout.CENTER);
+        panelValutazioniContainer.add(labelMedia, BorderLayout.SOUTH);
+        labelMedia.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
+        labelMedia.setFont(new Font("SansSerif", Font.BOLD, 12));
+
+        toggleLezioni.addActionListener(e -> mostraSotto(scrollLezioni));
+        toggleCompiti.addActionListener(e -> mostraSotto(scrollCompiti));
+        toggleValutazioni.addActionListener(e -> mostraSotto(panelValutazioniContainer));
+
+        // Liste read-only: niente selezione cliccabile/evidenziabile.
+        ListSelectionModel noSelection = new DefaultListSelectionModel() {
+            @Override public void setSelectionInterval(int i, int j) {}
+            @Override public void addSelectionInterval(int i, int j) {}
+        };
+        listLezioni.setSelectionModel(noSelection);
+        listCompiti.setSelectionModel(noSelection);
+        listValutazioni.setSelectionModel(noSelection);
+    }
 
     public JComponent getPanel() {
         return panel1;
     }
 
     /*
-     * Imposta lo studente da visualizzare.
-     * Per ora aggiorna solo la label di intestazione.
+     * Imposta lo studente nella label di intestazione.
+     * Le tre liste vengono popolate separatamente (vedi step successivi).
      */
     public void mostraProfilo(Studente studente, ClasseVirtuale classe) {
         labelProfilo.setText("Profilo di " + studente.getNome() + " " + studente.getCognome());
-        /*
-        TODO: Da implementare la Visualizzazione
-         */
+    }
+
+    public void addBackListener(ActionListener listener) {
+        buttonBack.addActionListener(listener);
     }
 
     /*
-     * Aggancia un listener al click del bottone "Indietro".
-     * Il controller lo usera' per tornare alla schermata di scelta studente.
+     * Swappa il contenuto di panelContenuto con il sotto-componente
+     * passato. revalidate + repaint perche' stiamo cambiando i figli
+     * di un container gia' visibile.
      */
-    public void addBackListener(ActionListener listener) {
-        buttonBack.addActionListener(listener);
+    private void mostraSotto(JComponent sotto) {
+        panelContenuto.removeAll();
+        panelContenuto.add(sotto, BorderLayout.CENTER);
+        panelContenuto.revalidate();
+        panelContenuto.repaint();
+    }
+
+    /*
+     * Formato data unico per tutte le tre liste, cosi' resta coerente
+     * con gli spinner del docente (dd/MM/yyyy).
+     */
+    private static final DateTimeFormatter FMT_DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+    /*
+     * Ogni elemento del model e' una stringa HTML: <b>argomento — data</b>
+     * sopra, descrizione in italic grigio sotto. JLabel (il renderer di
+     * default della JList) riconosce il prefisso <html> e la disegna su
+     * piu' righe, senza che dobbiamo scrivere un renderer custom.
+     */
+    public void setLezioni(List<Lezione> lezioni) {
+        modelLezioni.clear();
+        for (Lezione l : lezioni) {
+            modelLezioni.addElement(
+                "<html><b>" + l.getArgomentoTrattato() + " — " + l.getData().format(FMT_DATA) + "</b><br>"
+                + "<font color='gray'><i>" + l.getDescrizione() + "</i></font></html>"
+            );
+        }
+    }
+
+    /*
+     * Stessa idea della setLezioni: titolo + le due date (con freccia
+     * per rendere chiaro che si va da assegnazione a scadenza),
+     * descrizione sotto in italic grigio.
+     */
+    public void setCompiti(List<Compito> compiti) {
+        modelCompiti.clear();
+        for (Compito c : compiti) {
+            modelCompiti.addElement(
+                "<html><b>" + c.getTitolo() + " — " + c.getDataDiAssegnazione().format(FMT_DATA)
+                + " → " + c.getDataDiScadenza().format(FMT_DATA) + "</b><br>"
+                + "<font color='gray'><i>" + c.getDescrizione() + "</i></font></html>"
+            );
+        }
+    }
+
+    /*
+     * Per le valutazioni:
+     * - voto formattato con un decimale ("%.1f"), cosi' "6.0" / "8.5"
+     *   restano leggibili anche se internamente sono double;
+     * - tipologia: l'enum di default si stamperebbe "PROVA_SCRITTA",
+     *   che e' brutto; lo trasformo al volo in "prova scritta".
+     */
+    public void setValutazioni(List<Valutazione> valutazioni) {
+        modelValutazioni.clear();
+        for (Valutazione v : valutazioni) {
+            String tipologiaLeggibile = v.getTipologia().name().toLowerCase().replace('_', ' ');
+            modelValutazioni.addElement(
+                "<html><b>" + String.format("%.1f", v.getVoto()) + " — " + tipologiaLeggibile
+                + " — " + v.getData().format(FMT_DATA) + "</b><br>"
+                + "<font color='gray'><i>" + v.getDescrizione() + "</i></font></html>"
+            );
+        }
+    }
+
+    /*
+     * Mostra la media nella label in basso a destra del container
+     * Valutazioni. Il facade ritorna il double "grezzo": qui lo
+     * arrotondiamo alla seconda cifra (half-up) col formato "%.2f",
+     * coerente con il formato del voto nelle liste.
+     */
+    public void setMediaStudente(double media) {
+        labelMedia.setText("Media: " + String.format("%.2f", media));
     }
 
     {
@@ -66,7 +238,7 @@ public class FormVisualizzazioneProfilo {
      */
     private void $$$setupUI$$$() {
         panel1 = new JPanel();
-        panel1.setLayout(new GridLayoutManager(2, 1, new Insets(30, 30, 30, 30), 0, 15));
+        panel1.setLayout(new GridLayoutManager(4, 1, new Insets(20, 30, 20, 30), 0, 10));
         panel1.setBorder(BorderFactory.createTitledBorder(null, "", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
         buttonBack = new JButton();
         Font buttonBackFont = this.$$$getFont$$$("SansSerif", -1, 12, buttonBack.getFont());
@@ -78,7 +250,26 @@ public class FormVisualizzazioneProfilo {
         if (labelProfiloFont != null) labelProfilo.setFont(labelProfiloFont);
         labelProfilo.setHorizontalAlignment(0);
         labelProfilo.setText("Profilo");
-        panel1.add(labelProfilo, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        panel1.add(labelProfilo, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JPanel subbar = new JPanel();
+        subbar.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), 0, 0, true, false));
+        panel1.add(subbar, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        toggleLezioni = new JToggleButton();
+        toggleLezioni.setFont(new Font("SansSerif", Font.BOLD, 11));
+        toggleLezioni.setText("Lezioni");
+        subbar.add(toggleLezioni, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(95, 22), null, 0, false));
+        toggleCompiti = new JToggleButton();
+        toggleCompiti.setFont(new Font("SansSerif", Font.BOLD, 11));
+        toggleCompiti.setText("Compiti");
+        subbar.add(toggleCompiti, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(95, 22), null, 0, false));
+        toggleValutazioni = new JToggleButton();
+        toggleValutazioni.setFont(new Font("SansSerif", Font.BOLD, 11));
+        toggleValutazioni.setText("Valutazioni");
+        subbar.add(toggleValutazioni, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(95, 22), null, 0, false));
+        panelContenuto = new JPanel();
+        panelContenuto.setLayout(new BorderLayout(0, 0));
+        panelContenuto.setBorder(BorderFactory.createLineBorder(new Color(-3355444)));
+        panel1.add(panelContenuto, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
     }
 
     /**
