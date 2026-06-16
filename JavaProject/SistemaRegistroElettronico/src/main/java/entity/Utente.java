@@ -32,7 +32,10 @@ public abstract class Utente {
 		this.password = password;
 	}
 
-	public abstract void cercaClasse();
+	/*
+	Metodi getters che non verranno Overridati, dato che i dati dell'Utente sono
+	praticamente gli unici utilizzabili da Docente e Studente
+	 */
 
 	public String getNome() {
 		return nome;

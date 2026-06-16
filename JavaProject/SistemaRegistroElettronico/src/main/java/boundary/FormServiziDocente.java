@@ -12,9 +12,10 @@ import java.util.List;
 
 /*
  * Boundary del login docente. Speculare a FormServiziStudente: stessa
- * struttura del .form (nome+cognome+errore+conferma), stessa API,
- * stesso pattern del professore (apriXxx -> JFrame, listener nel
- * costruttore, guardie nel Boundary, controller stateless).
+ * struttura del .form (nome+cognome+errore+conferma)
+ *
+ * Controlla tramite guardie l'inserimento di nome+cognome, chiama la scelta
+ * della classe popolando la comboBox grazie al controller
  */
 public class FormServiziDocente {
     private JPanel panel1;
@@ -55,6 +56,15 @@ public class FormServiziDocente {
                 return;
             }
 
+            /*
+            Questo richiama la ricerca filtrata Custom creata da noi nel
+            GestorePersistenza, tramite questo meccanismo
+
+            GestoreServiziDocente (Controller) -> GestoreRegistroDocente (Entity) ->
+            GestorePersistenza(Database)
+
+             */
+
             List<ClasseVirtuale> classi = GestoreServiziDocente.classiDi(docente);
             if (classi.isEmpty()) {
                 mostraErrore("Nessuna classe associata a questo docente");
@@ -76,6 +86,12 @@ public class FormServiziDocente {
             ClasseVirtuale scelta = formScelta.getClasseSelezionata();
             formScelta.chiudiDialog();
             frame.dispose();
+
+            /*
+            Quando tutto andrà a buon fine, aprirà la finestra di Gestione del Registro
+            che si dividerà poi in due sotto-panel
+             */
+
             new FormGestioneRegistro().apriGestioneRegistro(docente, scelta);
         });
         formScelta.apriDialog(frame);

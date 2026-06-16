@@ -28,6 +28,11 @@ public class Lezione {
 		this.classeVirtuale = classeVirtuale;
 	}
 
+	/*
+	Metodi utilizzati principalmente lato Boundary, per permettere una corretta visualizzazione
+	degli oggetti con i relativi dati
+	 */
+
 	public LocalDate getData() {
 		return data;
 	}
@@ -38,10 +43,6 @@ public class Lezione {
 
 	public String getDescrizione() {
 		return descrizione;
-	}
-
-	public ClasseVirtuale getClasseVirtuale() {
-		return classeVirtuale;
 	}
 
 }

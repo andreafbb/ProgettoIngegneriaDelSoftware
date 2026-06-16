@@ -26,6 +26,9 @@ import java.util.List;
  * sotto-pannelli di inserimento. Per ora i tre sotto-pannelli sono
  * placeholder; verranno trasformati nei form di inserimento veri nei
  * prossimi step.
+ *
+ * Molto complesso perché i layout dell'aggiornamento contengono molti campi
+ * da inserire, validare e che permettono il salvataggio dei dati
  */
 public class FormAggiornaRegistro {
 
@@ -86,13 +89,6 @@ public class FormAggiornaRegistro {
 
     public FormAggiornaRegistro() {
 
-        /*
-         * Client property dell'Aqua LookAndFeel di macOS: trasformano i tre
-         * JToggleButton in un segmented control nativo (i pulsanti si toccano
-         * e quello selezionato cambia colore). Su L&F non Aqua queste property
-         * vengono ignorate silenziosamente: il toggle resta funzionale, solo
-         * non segmentato graficamente.
-         */
         toggleLezione.putClientProperty("JButton.buttonType", "segmented");
         toggleLezione.putClientProperty("JButton.segmentPosition", "first");
         toggleCompito.putClientProperty("JButton.buttonType", "segmented");
@@ -131,6 +127,9 @@ public class FormAggiornaRegistro {
                 mostraErroreLezione("Inserire una descrizione");
                 return;
             }
+            /*
+            Comunicazione con Controller
+             */
             boolean ok = GestoreServiziDocente.registraLezione(classe, data, argomento, descrizione);
             if (ok) {
                 mostraSuccessoLezione("Lezione registrata");
@@ -162,6 +161,9 @@ public class FormAggiornaRegistro {
                 mostraErroreCompito("La scadenza non puo' essere prima dell'assegnazione");
                 return;
             }
+             /*
+            Comunicazione con Controller
+             */
             boolean ok = GestoreServiziDocente.registraCompito(classe, titolo, dataAssegnazione, descrizione, dataScadenza);
             if (ok) {
                 mostraSuccessoCompito("Compito registrato");
@@ -192,6 +194,9 @@ public class FormAggiornaRegistro {
                 mostraErroreValutazione("Inserire una descrizione");
                 return;
             }
+             /*
+            Comunicazione con Controller
+             */
             boolean ok = GestoreServiziDocente.registraValutazione(classe, data, voto, descrizione, tipologia, studente);
             if (ok) {
                 mostraSuccessoValutazione("Valutazione registrata");
@@ -246,12 +251,6 @@ public class FormAggiornaRegistro {
      * Costruisce il pannello "Nuova Lezione" e popola
      * i campi spinner/textfield/button/label di livello classe (necessari
      * al Controller per leggere/scrivere lo stato)
-     *
-     * Layout:
-     *   row 0: pannello campi 3x2 (Data | spinner, Argomento | field,
-     *          Descrizione | field)
-     *   row 1: labelMessaggioLezione (errore/successo)
-     *   row 2: buttonSalvaLezione (centrato)
      */
     private JPanel creaFormLezione() {
 
@@ -351,11 +350,6 @@ public class FormAggiornaRegistro {
      * descrizione, data di scadenza. Uso due JSpinner per le date
      * (cosi' non rischio formati sbagliati) e due JTextField per
      * titolo e descrizione.
-     *
-     * Layout:
-     *   row 0: pannello campi 4x2
-     *   row 1: labelMessaggioCompito (errore/successo)
-     *   row 2: buttonSalvaCompito (centrato)
      */
     private JPanel creaFormCompito() {
 
@@ -412,8 +406,6 @@ public class FormAggiornaRegistro {
 
         return root;
     }
-
-    // ---- API per il Controller, sotto-caso Compito ----
 
     public String getTitoloCompito() {
         return fieldTitoloCompito.getText().trim();
@@ -473,11 +465,6 @@ public class FormAggiornaRegistro {
      *   PROVA_SCRITTA / PROVA_ORALE).
      * - studente: combo vuota all'inizio. La riempie il Controller con la
      *   lista degli studenti della classe (vedi setStudentiClasse).
-     *
-     * Layout:
-     *   row 0: pannello campi 5x2
-     *   row 1: labelMessaggioValutazione (errore/successo)
-     *   row 2: buttonSalvaValutazione (centrato)
      */
     private JPanel creaFormValutazione() {
 
@@ -550,8 +537,6 @@ public class FormAggiornaRegistro {
 
         return root;
     }
-
-    // ---- API per il Controller, sotto-caso Valutazione ----
 
     public LocalDate getDataValutazione() {
         Date d = (Date) spinnerDataValutazione.getValue();

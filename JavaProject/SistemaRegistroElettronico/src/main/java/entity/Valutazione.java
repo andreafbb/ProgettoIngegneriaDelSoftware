@@ -53,10 +53,6 @@ public class Valutazione {
 		return tipologia;
 	}
 
-	public ClasseVirtuale getClasseVirtuale() {
-		return classeVirtuale;
-	}
-
 	public Studente getStudenteValutato() {
 		return studenteValutato;
 	}

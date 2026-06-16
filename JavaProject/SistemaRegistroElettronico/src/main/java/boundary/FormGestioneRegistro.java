@@ -17,11 +17,6 @@ import java.awt.*;
  * In basso: un pannello "contenuto" che mostra alternativamente il
  * sotto-pannello di aggiornamento (FormAggiornaRegistro) o di
  * consultazione (FormConsultaRegistro).
- *
- * Pattern del professore (apriXxx -> JFrame, listener nel costruttore):
- * il Boundary possiede il proprio JFrame, il back listener e' registrato
- * qui, e apriGestioneRegistro inizializza i due sotto-form passando la
- * ClasseVirtuale.
  */
 public class FormGestioneRegistro {
 
@@ -60,6 +55,9 @@ public class FormGestioneRegistro {
         toggleAggiorna.setSelected(true);
         mostraSotto(formAggiorna.getPanel());
 
+        /*
+        A seconda della selezione del Toggle, verrà chiamato il Panel del Caso D'Uso selezionato
+         */
         toggleAggiorna.addActionListener(e -> mostraSotto(formAggiorna.getPanel()));
         toggleConsulta.addActionListener(e -> mostraSotto(formConsulta.getPanel()));
 

@@ -30,6 +30,11 @@ public class Compito {
 		this.classeVirtuale = classeVirtuale;
 	}
 
+	/*
+	Metodi utilizzati principalmente lato Boundary, per permettere una corretta visualizzazione
+	degli oggetti con i relativi dati
+	 */
+
 	public String getTitolo() {
 		return titolo;
 	}
@@ -44,10 +49,6 @@ public class Compito {
 
 	public LocalDate getDataDiScadenza() {
 		return dataDiScadenza;
-	}
-
-	public ClasseVirtuale getClasseVirtuale() {
-		return classeVirtuale;
 	}
 
 }

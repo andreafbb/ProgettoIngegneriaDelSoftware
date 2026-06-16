@@ -6,7 +6,6 @@ public class GestoreAggiornamentiRegistro {
 
 	/*
 	Metodi di creazione degli oggetti relativi all'aggiornamento del registro:
-
 	Caso d'uso orchestrato dal controller GestoreServiziDocente e dal
 	facade GestoreRegistroDocente
 

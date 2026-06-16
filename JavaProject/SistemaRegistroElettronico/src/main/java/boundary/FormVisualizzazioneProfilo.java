@@ -22,17 +22,18 @@ import java.util.Locale;
  * Form di visualizzazione del profilo studente.
  *
  * In alto: bottone Indietro + label "Profilo di Nome Cognome".
- * Sotto: una sub-toggle bar (Lezioni / Compiti / Valutazioni) identica
- * a quella del docente, e un panelContenuto bordato che mostra
- * alternativamente la lista (scrollabile) del tipo selezionato.
+ * Sotto: una sub-toggle bar (Lezioni / Compiti / Valutazioni)
+ * Che permette di scegliere quali elementi del Registro visualizzare
  *
  * Le 3 liste sono JList<String> sopra un DefaultListModel<String>: ogni
  * elemento e' una stringa HTML che il renderer di default di Swing sa
- * interpretare (multi-riga, grassetto, italic). Cosi' niente
- * ListCellRenderer custom.
+ * interpretare (multi-riga, grassetto, italic).
+ * Abbiamo quindi utilizzato un HTML leggerissmo per permettere una
+ * visualizzazione degli elementi più carina, dato che dovendo solo visualizzare
+ * i dati, non c'è bisogno di accedere ai dati strutturati, ma possiamo utilizzare gli attributi
  *
  * Il Controller riempie le tre liste chiamando setLezioni / setCompiti /
- * setValutazioni (vedi sotto): e' li' che facciamo la formattazione HTML
+ * setValutazioni (vedi sotto) tramite cui poi facciamo la formattazione HTML
  * di ogni item.
  */
 public class FormVisualizzazioneProfilo {
@@ -48,7 +49,7 @@ public class FormVisualizzazioneProfilo {
     /*
      * JFrame "di proprieta'" di questo Boundary, creato in apriProfilo().
      * Tenerlo come campo di istanza ci permette di chiuderlo dal listener
-     * "Indietro" registrato nel costruttore (vedi sotto): la lambda cattura
+     * "Indietro" registrato nel costruttore (vedi sotto): la lambda function cattura
      * `this` e legge il campo nel momento del click, quando ormai apriProfilo
      * lo ha gia' valorizzato.
      */
@@ -73,8 +74,8 @@ public class FormVisualizzazioneProfilo {
     private final JList<String> listValutazioni = new JList<>(modelValutazioni);
 
     /*
-    Questi invece li useremo per scrollare gli elementi (Valutazioni in alto
-    avrà anche la media calcolata al momento
+    Questi invece li useremo per scrollare gli elementi (Valutazioni in basso a destra
+    avrà anche la media calcolata al momento)
      */
     private final JScrollPane scrollLezioni = new JScrollPane(listLezioni);
     private final JScrollPane scrollCompiti = new JScrollPane(listCompiti);
@@ -82,9 +83,9 @@ public class FormVisualizzazioneProfilo {
 
     /*
      * Per le Valutazioni vogliamo mostrare la media in basso a destra,
-     * sempre visibile (non scrolla con la lista). Avvolgo lo scroll + la
-     * label in un container con BorderLayout: scroll al CENTER (prende
-     * tutto lo spazio), label al SOUTH allineata a destra.
+     * con modalità "sticky" cioè non si muove dalla schermata(non scrolla con la lista).
+     * Avvolgo lo scroll + lalabel in un container con BorderLayout: scroll al CENTER (prende
+     * tutto lo spazio), label allineata a destra in basso.
      *
      * E' questo container, non lo scroll diretto, che il toggle
      * Valutazioni inserisce dentro panelContenuto.
@@ -94,12 +95,6 @@ public class FormVisualizzazioneProfilo {
 
     public FormVisualizzazioneProfilo() {
 
-        /*
-         * Stesso trucco del FormAggiornaRegistro: su macOS (Aqua) le
-         * client property segmented disegnano i tre toggle come un'unica
-         * barra a 3 segmenti. Su altri L&F vengono ignorate e i toggle
-         * restano normali (ma funzionali).
-         */
         toggleLezioni.putClientProperty("JButton.buttonType", "segmented");
         toggleLezioni.putClientProperty("JButton.segmentPosition", "first");
         toggleCompiti.putClientProperty("JButton.buttonType", "segmented");
@@ -126,7 +121,11 @@ public class FormVisualizzazioneProfilo {
         toggleCompiti.addActionListener(e -> mostraSotto(scrollCompiti));
         toggleValutazioni.addActionListener(e -> mostraSotto(panelValutazioniContainer));
 
-        // Liste read-only: niente selezione cliccabile/evidenziabile.
+        /*
+        Liste read-only: niente selezione cliccabile/evidenziabile.
+        Non è un problema dato che uno studente non deve poter modificare o accedere
+        ai dati strutturati
+         */
         ListSelectionModel noSelection = new DefaultListSelectionModel() {
             @Override public void setSelectionInterval(int i, int j) {}
             @Override public void addSelectionInterval(int i, int j) {}
@@ -136,7 +135,7 @@ public class FormVisualizzazioneProfilo {
         listValutazioni.setSelectionModel(noSelection);
 
         /*
-         * Back: chiudo questo frame e riapro il login studente. La lambda
+         * Tasto indietro: chiudo questo frame e riapro il login studente. La lambda
          * legge il campo `frame` al momento del click — apriProfilo lo
          * avra' gia' valorizzato.
          */
@@ -151,11 +150,8 @@ public class FormVisualizzazioneProfilo {
     }
 
     /*
-     * Entry point del Boundary, pattern del professore (apriXxx -> JFrame).
-     *
      * Carica i dati dal controller, popola la UI, crea il JFrame e lo
-     * mostra. Niente piu' Controller che fa setContentPane / setVisible:
-     * il Boundary possiede il proprio frame.
+     * mostra.
      *
      * Chiamato dal listener "Conferma" di FormSceltaClasse (dopo che lo
      * studente ha scelto la classe). Il listener Back, registrato qui
@@ -167,9 +163,8 @@ public class FormVisualizzazioneProfilo {
 
         /*
          * Tiro fuori dal controller le 3 liste + la media. La lista
-         * valutazioni la tengo in locale per riusarla nel calcolo media
-         * (il controller, stateless, accetta la lista invece di rifare il
-         * fetch al DB).
+         * valutazioni la tengo in locale per riusarla nel calcolo media.
+         Possiamo farlo perché il controller ha metodi stateless
          */
         setLezioni(GestoreServiziStudente.visualizzaLezioni(classe));
         setCompiti(GestoreServiziStudente.visualizzaCompiti(classe));
@@ -207,9 +202,9 @@ public class FormVisualizzazioneProfilo {
 
     /*
      * Ogni elemento del model e' una stringa HTML: <b>argomento — data</b>
-     * sopra, descrizione in italic grigio sotto. JLabel (il renderer di
-     * default della JList) riconosce il prefisso <html> e la disegna su
-     * piu' righe, senza che dobbiamo scrivere un renderer custom.
+     * sopra, descrizione in italic grigio sotto. JLabel riconosce il prefisso <html>
+      e la disegna su piu' righe, facendo il clear del model per poi disegnare ogni elemento
+      * della lista passata in input
      */
     public void setLezioni(List<Lezione> lezioni) {
         modelLezioni.clear();
@@ -239,14 +234,15 @@ public class FormVisualizzazioneProfilo {
 
     /*
      * Per le valutazioni:
-     * - voto formattato con un decimale ("%.1f"), cosi' "6.0" / "8.5"
-     *   restano leggibili anche se internamente sono double;
+     * - in teoria il formato %.1f non serve perché nell'inserimento dei voti è possibile
+     * inserire solo numeri ad intervalli di 0.5
      * - tipologia: l'enum di default si stamperebbe "PROVA_SCRITTA",
      *   che e' brutto; lo trasformo al volo in "prova scritta".
      */
     public void setValutazioni(List<Valutazione> valutazioni) {
         modelValutazioni.clear();
         for (Valutazione v : valutazioni) {
+            //Trasformo la tipologia in lowerCase+ spazio al posto di _
             String tipologiaLeggibile = v.getTipologia().name().toLowerCase().replace('_', ' ');
             modelValutazioni.addElement(
                 "<html><b>" + String.format("%.1f", v.getVoto()) + " — " + tipologiaLeggibile

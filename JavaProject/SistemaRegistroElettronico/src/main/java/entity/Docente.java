@@ -41,15 +41,6 @@ public class Docente extends Utente {
 		this.classiGestite.add(c);
 	}
 
-	public List<ClasseVirtuale> getClassiGestite() {
-		return new ArrayList<>(classiGestite);
-	}
-
-	public void cercaClasse() {
-		// TODO - implement entity.Docente.cercaClasse
-		throw new UnsupportedOperationException();
-	}
-
 	/*
 	Stesso criterio di Studente.equals (nome + cognome + email,
 	case-insensitive): serve per confrontare un Docente caricato dalla

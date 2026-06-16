@@ -13,6 +13,14 @@ import java.util.Map;
 public class GestorePersistenza {
 
     /*
+    In questa classe, oltre ai metodi forniti dal docente, abbiamo aggiunto metodi
+    per particolari operazioni che potevano richiedere JOIN, non previste da cercaPerCampi
+
+    Questo perché nel nostro dominio è presente una relazione MtM, che prevedeva
+    una tabella associativa nel DB, obbligando l'utilizzo di una JOIN
+     */
+
+    /*
     Aggiungiamo un metodo ad hoc per ricevere la lista di studenti per ogni classe
      */
 

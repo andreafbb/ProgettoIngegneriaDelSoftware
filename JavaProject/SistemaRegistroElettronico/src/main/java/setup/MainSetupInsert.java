@@ -228,6 +228,11 @@ public class MainSetupInsert {
         Collections.addAll(entitaDaSalvare, compiti5A);
         Collections.addAll(entitaDaSalvare, valutazioni5A);
 
+        /*
+        Per lasciare il codice più pulito abbiamo quindi optato per funzioni di add()
+        sparse, per poi salvare con il metodo salvaTutti fornito dal professore, che accetta
+        un Array di Object in input
+         */
         boolean esito = gestore.salvaTutti(entitaDaSalvare.toArray());
         System.out.println("Setup avviato con esito: " + esito);
         JpaUtil.getInstance().chiudi();

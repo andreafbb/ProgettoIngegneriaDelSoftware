@@ -51,6 +51,15 @@ public class FormServiziStudente {
                 return;
             }
 
+            /*
+            Questo richiama la ricerca filtrata Custom creata da noi nel
+            GestorePersistenza, tramite questo meccanismo
+
+            GestoreServiziStudente (Controller) -> GestoreVisualizzazione (Entity) ->
+            GestorePersistenza(Database)
+
+             */
+
             List<ClasseVirtuale> classi = GestoreServiziStudente.classiDi(studente);
             if (classi.isEmpty()) {
                 mostraErrore("Nessuna classe associata a questo studente");
@@ -74,6 +83,12 @@ public class FormServiziStudente {
             ClasseVirtuale scelta = formScelta.getClasseSelezionata();
             formScelta.chiudiDialog();
             frame.dispose();
+
+            /*
+            Quando tutto va a buon fine, apre il Form di Visualizzazione del Profilo
+            permettendo il corretto svolgimento del Caso D'Uso
+             */
+
             new FormVisualizzazioneProfilo().apriProfilo(studente, scelta);
         });
         formScelta.apriDialog(frame);

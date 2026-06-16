@@ -12,15 +12,17 @@ import java.util.List;
 /*
  * Boundary per la scelta della ClasseVirtuale dopo il login.
  *
- * Stesso pattern degli altri Boundary del progetto: JPanel bound a .form
- * (GUI Designer di IntelliJ), API a base di setClassi + listener.
- *
  * Il Boundary possiede il proprio JDialog modale (vedi apriDialog).
  * Modale rispetto al frame di login: e' una scelta "secondaria" sopra
  * al login e blocca il flow finche' l'utente non sceglie o annulla.
  * Su Annulla / X il dialog si chiude da solo; su Conferma chi ha
  * registrato addConfermaListener decide cosa fare e chiama
  * chiudiDialog() per chiuderlo.
+ *
+ * Viene chiamato indipendetemente da ServiziStudente o ServiziDocente, una volta
+ * inseriti nome e cognome dell'Utente.
+ *
+ * Viene popolato SOLO con le classi relative a quell'Utente
  */
 public class FormSceltaClasse {
     private JPanel panel1;
@@ -45,6 +47,11 @@ public class FormSceltaClasse {
     public JComponent getPanel() {
         return panel1;
     }
+
+    /*
+    Metodo utilizzato nei Form Docente/Studente, prende la Lista delle classi
+    associate a quell'Utente, tramite la ricerca filtrata dei Facade Orchestrati dai controller
+     */
 
     public void setClassi(List<ClasseVirtuale> classi) {
         DefaultComboBoxModel<ClasseVirtuale> model = new DefaultComboBoxModel<>();

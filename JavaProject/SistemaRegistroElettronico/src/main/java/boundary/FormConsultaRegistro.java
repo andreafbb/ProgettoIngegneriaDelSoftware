@@ -23,26 +23,17 @@ import java.util.List;
  * Viene incastrato dentro panelContenuto di FormGestioneRegistro quando
  * il toggle "Consulta Registro" e' selezionato.
  *
- * Layout: sub-toggle bar (Lezioni / Compiti / Monitora) — identica per
- * stile a quella di FormVisualizzazioneProfilo (segmented su macOS, 95x22)
+ * Layout: sub-toggle bar (Lezioni / Compiti / Monitora)
  * — e un panelContenuto interno che ospita alternativamente:
  *  - scrollLezioni / scrollCompiti: JList<String> read-only con item
- *    HTML, stesso identico rendering del profilo studente;
+ *    HTML, come con studente
  *  - panelMonitora: form con spinner Da/A + bottone "Mostra" sopra,
  *    elenco valutazioni filtrate + media in basso. Il monitor mostra
  *    nelle valutazioni anche il NOME dello studente valutato, in piu'
  *    rispetto al profilo studente.
- *
- * La struttura statica (root + subbar + panelContenuto) e' bound a
- * FormConsultaRegistro.form (IntelliJ GUI Designer). Il contenuto dinamico
- * — JList, panelMonitora e listener — resta costruito programmaticamente
- * nel costruttore, stesso pattern di FormAggiornaRegistro.
  */
 public class FormConsultaRegistro {
 
-    /*
-     * Campi bound al .form: popolati dal $$$setupUI$$$ generato da IntelliJ.
-     */
     private JPanel panel1;
     private JToggleButton toggleLezioni;
     private JToggleButton toggleCompiti;
@@ -52,8 +43,10 @@ public class FormConsultaRegistro {
     /*
      * Liste read-only per Lezioni e Compiti — pattern identico a
      * FormVisualizzazioneProfilo: JList<String> sopra DefaultListModel
-     * + JScrollPane. Ogni item e' una stringa HTML che il renderer di
-     * default JLabel sa interpretare (no ListCellRenderer custom).
+     * + JScrollPane
+     *
+     * Ogni item è trattato come per la Visualizzazione dello Studente, viene utilizzato
+     * un semplice layout HTML (riutilizzo quello dello Studente)
      */
     private final DefaultListModel<String> modelLezioni = new DefaultListModel<>();
     private final DefaultListModel<String> modelCompiti = new DefaultListModel<>();
@@ -91,12 +84,6 @@ public class FormConsultaRegistro {
 
     public FormConsultaRegistro() {
 
-        /*
-         * Client property dell'Aqua LookAndFeel di macOS: trasformano i tre
-         * JToggleButton in un segmented control nativo. Su L&F non Aqua queste
-         * property vengono ignorate silenziosamente: il toggle resta
-         * funzionale, solo non segmentato graficamente.
-         */
         toggleLezioni.putClientProperty("JButton.buttonType", "segmented");
         toggleLezioni.putClientProperty("JButton.segmentPosition", "first");
         toggleCompiti.putClientProperty("JButton.buttonType", "segmented");
@@ -109,12 +96,7 @@ public class FormConsultaRegistro {
         gruppo.add(toggleCompiti);
         gruppo.add(toggleMonitora);
 
-        // === Costruzione panelMonitora ===
         buildPanelMonitora();
-
-        // panelContenuto e' creato dal $$$setupUI$$$ (BorderLayout, niente
-        // bordo nel .form); la LineBorder grigia la setto qui perche' il
-        // Designer per i bordi a colore custom e' meno comodo.
         panelContenuto.setBorder(BorderFactory.createLineBorder(new Color(0xCCCCCC)));
 
         // Stato iniziale: vista "Lezioni"
@@ -125,7 +107,7 @@ public class FormConsultaRegistro {
         toggleCompiti.addActionListener(e -> mostraSotto(scrollCompiti));
         toggleMonitora.addActionListener(e -> mostraSotto(panelMonitora));
 
-        // === Liste read-only: niente selezione cliccabile/evidenziabile ===
+       //Stesso utilizzo delle liste read-only non selezionabili come con studente
         ListSelectionModel noSelection = new DefaultListSelectionModel() {
             @Override public void setSelectionInterval(int i, int j) {}
             @Override public void addSelectionInterval(int i, int j) {}
@@ -167,14 +149,11 @@ public class FormConsultaRegistro {
 
     /*
      * Sotto-pannello Monitora:
-     *   row NORTH: barra "Da: [spinner]   A: [spinner]   [Mostra]"
-     *              + labelMessaggio sotto (errore/successo)
-     *   row CENTER: scroll lista valutazioni filtrate + labelMedia in basso
-     *               a destra (stesso layout del profilo studente Valutazioni).
+     * Formato dagli spinner per la data, il bottone Mostra e un sotto panel ulteriore
+     * per la visualizzazione di tutte le Valutazioni + Media
      */
     private void buildPanelMonitora() {
 
-        // ---- Header con spinner + bottone ----
         spinnerDataDa.setEditor(new JSpinner.DateEditor(spinnerDataDa, "dd/MM/yyyy"));
         spinnerDataA.setEditor(new JSpinner.DateEditor(spinnerDataA, "dd/MM/yyyy"));
         spinnerDataDa.setPreferredSize(new Dimension(140, 26));
@@ -212,7 +191,6 @@ public class FormConsultaRegistro {
         header.add(barraDate, BorderLayout.CENTER);
         header.add(labelMessaggioMonitora, BorderLayout.SOUTH);
 
-        // ---- Risultato (lista filtrata + media) ----
         labelMedia.setFont(new Font("SansSerif", Font.BOLD, 12));
         labelMedia.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
         panelRisultatoMonitora.add(scrollMonitora, BorderLayout.CENTER);
@@ -246,6 +224,11 @@ public class FormConsultaRegistro {
     }
 
     private static final DateTimeFormatter FMT_DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+    /*
+    Qui i metodi che vanno a generare il layout in HTML per ogni elemento visualizzabile
+    nel Panel di Consulta registro
+     */
 
     /*
      * Stesso formato del profilo studente: argomento + data in bold,
@@ -296,7 +279,7 @@ public class FormConsultaRegistro {
 
     /*
      * Media della classe nell'intervallo. Il facade ritorna il double
-     * "grezzo": qui lo arrotondiamo alla seconda cifra (half-up) col
+     * "grezzo": qui lo arrotondiamo alla seconda cifra col
      * formato "%.2f", coerente col profilo studente.
      */
     public void setMediaMonitorata(double media) {

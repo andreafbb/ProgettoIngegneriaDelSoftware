@@ -16,8 +16,7 @@ import java.util.List;
 /*
  * Controller del flow docente.
  *
- * Pattern BCED del corso (esempio ControllerRimessaggio del professore):
- * classe stateless, metodi static. Il Boundary chiama questi metodi
+ * Pattern BCED: classe stateless, metodi static. Il Boundary chiama questi metodi
  * passando dati grezzi / Entity, e riceve Entity (o primitivi) di
  * risposta. Tutti gli accessi al DB sono delegati ai facade in entity/
  * (GestoreRegistroDocente per lettura/persistenza, GestoreAggiornamentiRegistro
@@ -30,10 +29,15 @@ import java.util.List;
  * Boundary: questo controller assume input gia' validato e si limita alla
  * coordinazione operativa (crea via facade A, registra via facade B,
  * ritorna l'esito boolean).
+ *
+ * Nel controller abbiamo quindi solo metodi di salvataggio di input già validati
+ * oppure di ricerca di dati persistenti per fornirli al Boundary
  */
 public class GestoreServiziDocente {
 
-	// ============== Login ==============
+	/*
+	Metodi per la gestione dell'accesso del Docente nel sistema
+	 */
 
 	public static Docente cercaDocente(String nome, String cognome) {
 		GestoreRegistroDocente gr = new GestoreRegistroDocente();
@@ -45,12 +49,16 @@ public class GestoreServiziDocente {
 		return gr.classiDi(docente);
 	}
 
-	// ============== Registro — letture (Consulta + popolamento combo) ==============
+
 
 	public static List<Studente> cercaStudenti(ClasseVirtuale classe) {
 		GestoreRegistroDocente gr = new GestoreRegistroDocente();
 		return gr.cercaStudenti(classe);
 	}
+
+	/*
+	Metodi per la gestione del Caso D'Uso di Consultazione del Registro
+	 */
 
 	public static List<Lezione> visualizzaLezioni(ClasseVirtuale classe) {
 		GestoreRegistroDocente gr = new GestoreRegistroDocente();
@@ -72,13 +80,10 @@ public class GestoreServiziDocente {
 		return gr.calcolaMediaClasse(valutazioni);
 	}
 
-	// ============== Registro — scritture (Aggiorna) ==============
-
 	/*
-	 * Catena "crea (facade A) + registra (facade B)" per ogni tipo di
-	 * aggiornamento. Il boolean di ritorno e' l'esito della persistenza:
-	 * il Boundary lo usa per scegliere feedback verde/rosso.
+	Metodi per la gestione del Caso D'Uso di Aggiornamento del Registro
 	 */
+
 	public static boolean registraLezione(ClasseVirtuale classe, LocalDate data, String argomento, String descrizione) {
 		GestoreAggiornamentiRegistro ga = new GestoreAggiornamentiRegistro();
 		GestoreRegistroDocente gr = new GestoreRegistroDocente();

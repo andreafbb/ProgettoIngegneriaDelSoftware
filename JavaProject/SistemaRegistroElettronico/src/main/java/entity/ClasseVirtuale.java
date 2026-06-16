@@ -63,23 +63,9 @@ public class ClasseVirtuale {
 		this.valutazioni.add(v);
 	}
 
-	public List<Compito> getElencoCompiti() {
-		return new ArrayList<>(this.compiti);
-	}
-
-	public List<Lezione> getElencoLezioni() {
-		return new ArrayList<>(this.lezioni);
-	}
-
 	public String getNome() {
 		return this.nome;
 	}
-
-
-	/*
-	Passo sempre una copia per proteggere da modifiche esterne
-	 */
-	public Docente getDocenteReferente() { return new Docente(this.docenteReferente); }
 
 	/*
 	Due ClasseVirtuale caricate da EntityManager diversi sono oggetti Java
@@ -97,11 +83,21 @@ public class ClasseVirtuale {
 				this.id.equals(c.id);
 	}
 
+	/*
+	Come funzione di Hash utilizzo proprio l'id relativo alla tabella del
+	DB, in modo da mantenere una corrispondenza e confrontare oggetti in maniera
+	corretta
+	 */
 	@Override
 	public int hashCode() {
 		return this.id == null ? 0 : this.id.hashCode();
 	}
 
+	/*
+	Il toString mi serve principalmente per la corretta visualizzazione delle
+	Classi nel boundary (se un giorno volessi cambiare come viene visualizzata una classe
+	in qualsiasi punto dell'interfaccia venga chiamata, vado a modificare solo qui)
+	 */
 	@Override
 	public String toString() {
 		return this.getNome();

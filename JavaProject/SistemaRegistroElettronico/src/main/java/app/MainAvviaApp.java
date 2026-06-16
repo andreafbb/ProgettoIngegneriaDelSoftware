@@ -10,8 +10,7 @@ import javax.swing.UIManager;
  *
  * Si limita a impostare il LookAndFeel di sistema e ad aprire il
  * Boundary di root (FormSceltaUtente) sull'EDT. Niente JFrame, niente
- * controller: il Boundary possiede il proprio frame e i propri listener,
- * coerente con il pattern del professore (vedi MainFrame di EsempioBCED).
+ * controller: il Boundary possiede il proprio frame e i propri listener.
  */
 public class MainAvviaApp {
 
@@ -21,10 +20,9 @@ public class MainAvviaApp {
          * qualunque componente Swing. Serve perche' FormAggiornaRegistro e
          * FormConsultaRegistro usano le client property
          * "JButton.buttonType=segmented" + "segmentPosition" per ottenere il
-         * segmented control nativo su Lezione/Compito/Valutazione: quelle
-         * property vengono renderizzate solo da Aqua. Se per qualche motivo il
-         * L&F non e' disponibile, ci si ricade su quello di default e i toggle
-         * restano funzionali (solo non segmentati graficamente).
+         * segmented control nativo su Lezione/Compito/Valutazione
+         * Sarebbe la gestione dei bottoni come Toggle (utilizzata praticamente su tutto
+         * il nostro progetto)
          */
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());

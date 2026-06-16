@@ -8,9 +8,9 @@ import java.util.Map;
 /*
  * Facade del package entity verso la persistenza.
  *
- * Nella variante BCED adottata nel corso, e' qui (e non nei Controller)
- * che si parla con database/. I Controller ricevono Entity gia' pronte e
- * non conoscono nulla di JPQL, EntityManager o fetch type.
+ * Permette la comunicazione, mediata da questa classe, tra DB e Controller,
+ * per fornire correttamente dati che servono al Caso D'Uso di Visualizzazione del Profilo
+ * lato Studente
  */
 public class GestoreVisualizzazione {
 

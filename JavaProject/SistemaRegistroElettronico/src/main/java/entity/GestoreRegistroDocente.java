@@ -8,11 +8,11 @@ import java.util.List;
 import java.util.Map;
 
 /*
- * Facade del package entity per il caso d'uso docente.
+ * Facade del package entity per i casi d'uso di Aggiornamento e Consultazione del Registro.
  *
  * Come GestoreVisualizzazione (lato studente), e' qui che si parla con
  * database/. Il Controller riceve Entity gia' pronte e non conosce nulla
- * di JPQL/EntityManager.
+ * di JPQL/EntityManager
  */
 public class GestoreRegistroDocente {
 
@@ -22,12 +22,16 @@ public class GestoreRegistroDocente {
 	 * ogni singola operazione: non c'e' stato condiviso, l'istanza puo'
 	 * essere riusata in sicurezza.
 	 */
+
 	private final GestorePersistenza gestorePersistenza = new GestorePersistenza();
 
 	/*
 	 * Cerca il Docente per nome+cognome senza vincolo di classe.
 	 * Restituisce null se non esiste alcun match. Non trattiamo il caso di
 	 * omonimi: prendiamo il primo risultato.
+	 *
+	 * Anche perché in un ipotetico accesso tramite email e password, l'email già
+	 * risolve il problema degli omonimi
 	 */
 	public Docente cercaDocente(String nome, String cognome) {
 		return gestorePersistenza.cercaPrimoPerCampi(
@@ -39,6 +43,7 @@ public class GestoreRegistroDocente {
 	/*
 	Metodo utile per ricevere la lista di studenti di una classe, per poter
 	selezionare lo studente desiderato al momento dell'inserimento di una Valutazione
+	utilizzato per popolare una comboBox poi nel boundary
 	 */
 
 	public List<Studente> cercaStudenti(ClasseVirtuale classe){
@@ -46,8 +51,7 @@ public class GestoreRegistroDocente {
 	}
 
 	/*
-	 * Ritorna le ClasseVirtuale di cui il Docente e' referente, recuperate
-	 * con JOIN al DB tramite cercaClassiPerUtente (no filtro Java).
+	 * Ritorna le ClasseVirtuale di cui il Docente e' referente.
 	 */
 	public List<ClasseVirtuale> classiDi(Docente docente) {
 		return gestorePersistenza.cercaClassiPerUtente(docente);

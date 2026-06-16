@@ -44,19 +44,10 @@ public class Studente extends Utente {
 		c.aggiungiStudente(this);
 	}
 
-	public List<ClasseVirtuale> getClassi() {
-		return new ArrayList<>(classi);
-	}
-
-	public void cercaClasse() {
-		// TODO - implement entity.Studente.cercaClasse
-		throw new UnsupportedOperationException();
-	}
-
 	/*
-	Metodo utilizzato da ClasseVirtuale per ottenere la lista di valutazioni
+	Metodo utilizzato da ClasseVirtuale (contains) per ottenere la lista di valutazioni
 	per quel preciso studente, uso come discriminanti solo
-	nome, cognome ed email
+	nome, cognome ed email (in caso di omonimia l'email discrimina)
 	 */
 	@Override
 	public boolean equals(Object altroStudente) {
@@ -70,9 +61,9 @@ public class Studente extends Utente {
 	}
 
 	/*
-	Serve per impostare cosa visualizzerà il Form di inserimento della valutazione
+	Metodo utile ad impostare la corretta visualizzazione dell'oggetto Studente
+	mediante i suoi dati
 	 */
-
 	@Override
 	public String toString() {
 		return this.getNome()+" "+this.getCognome();

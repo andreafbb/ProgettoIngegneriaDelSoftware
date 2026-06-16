@@ -10,10 +10,8 @@ import java.awt.*;
  * Boundary di root: la prima schermata che vede l'utente
  * ("Come vuoi accedere?" + bottoni Studente/Docente).
  *
- * Pattern del professore: i listener dei bottoni sono registrati nel
- * costruttore del Boundary; apriSceltaUtente() crea il JFrame e lo mostra.
- * Su click chiude il proprio frame e apre il Boundary del flow scelto
- * (Boundary -> Boundary, senza passare dal Controller per la navigazione).
+ *  Qui gestiamo semplicemente l'instradamento verso utilizzo delle feature per
+ * Studente o Docente, non sarà possibile tornare indietro una volta scelto
  */
 public class FormSceltaUtente {
     private JPanel panel1;

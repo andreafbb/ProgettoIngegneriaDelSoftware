@@ -10,10 +10,8 @@ import entity.Valutazione;
 import java.util.List;
 
 /*
- * Controller del flow studente.
- *
- * Pattern BCED del corso (esempio ControllerRimessaggio del professore):
- * classe stateless, metodi static. Il Boundary chiama questi metodi
+ * Controller del flow studente: classe stateless, metodi static.
+ * Il Boundary chiama questi metodi
  * passando dati grezzi / Entity, e riceve Entity (o primitivi) di
  * risposta. Tutti gli accessi al DB sono delegati al facade in entity/
  * (GestoreVisualizzazione): il controller non conosce JPQL ne'
@@ -23,6 +21,9 @@ import java.util.List;
  * Le guardie sugli input (campo vuoto, studente non trovato, lista
  * vuota) stanno lato Boundary, dentro i listener: questo controller
  * assume input gia' validato e si limita alla coordinazione operativa.
+ *
+ * Nel controller abbiamo quindi solo metodi di salvataggio di input già validati
+ * oppure di ricerca di dati persistenti per fornirli al Boundary
  */
 public class GestoreServiziStudente {
 
