@@ -6,9 +6,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
 
 /*
-Utilizziamo l'approccio Table_per_class, cioè nel database andiamo
-a creare una tabella per ogni sottoclasse, quindi Docente e Studente
-avranno tabelle, mentre Utente no
+Per la traduzione della gen-spec utilizziamo la soluzione 2 vista a lezione,
+cioè nel database andiamo a creare una tabella per ogni sottoclasse,
+quindi Docente e Studente avranno tabelle, mentre Utente no.
+L'annotazione @MappedSuperclass serve proprio a definire una superclasse
+che non andrà ad essere tradotta in entità nel DB.
  */
 @MappedSuperclass
 public abstract class Utente {
