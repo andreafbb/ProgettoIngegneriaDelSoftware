@@ -96,38 +96,64 @@ schema DB.
 
 ## 4. Architettura BCED (come adottata nel corso)
 
-Variante BCED **specifica del corso** (NON la versione "Larman pura"):
+Variante BCED **specifica del corso** (NON la versione "Larman pura"),
+allineata all'esempio del professore (`ControllerRimessaggio` + `MainFrame`
+in EsempioBCED):
 
 | Package      | Layer | Ruolo                                                        |
 |--------------|-------|--------------------------------------------------------------|
-| `app/`       | -     | Entry point (`MainAvviaApp`). EDT setup.                     |
-| `boundary/`  | B     | Swing forms (passive UI, niente business logic, niente DB).  |
-| `controller/`| C     | Orchestratori "Gestori*Servizi". Coordinano use case.        |
+| `app/`       | -     | Entry point (`MainAvviaApp`). EDT setup + LookAndFeel.       |
+| `boundary/`  | B     | Swing forms. Possiedono i propri `JFrame`/`JDialog` e listener; chiamano il Controller. |
+| `controller/`| C     | Service stateless (metodi `static`). Coordinano i facade e ritornano dati. |
 | `entity/`    | E     | Modello di dominio + **facade di accesso al DB**.            |
 | `database/`  | D     | `GestorePersistenza` (CRUD generico) + `JpaUtil`.            |
 | `setup/`     | -     | Setup DB (`MainTablesChek`, `MainSetupInsert`). Fuori scope. |
 
-**Regola critica di accesso al database**:
+**Catena di chiamate**:
 
 ```
-Boundary  --notifica eventi-->  Controller  --invoca-->  Facade in entity/  --usa-->  database/
+Boundary  --click-->  Boundary (listener nel costruttore)
+                         |
+                         | guardie sugli input
+                         v
+                       Controller.metodoStatic(dati)
+                         |
+                         v
+                       Facade in entity/
+                         |
+                         v
+                       database/
 ```
+
+**Regole critiche**:
 
 - **Solo i facade in `entity/`** (`GestoreVisualizzazione`,
-  `GestoreRegistroDocente`, `GestoreAggiornamentiRegistro`, ...) parlano
-  con `database/`. Espongono un'API di alto livello (`elencoClassi()`,
-  `cercaStudenteInClasse(...)`, ...) e nascondono al Controller i
-  dettagli di JPQL, `EntityManager`, fetch type.
-- **Il Controller** non istanzia mai `new GestorePersistenza()` e non
-  importa nulla da `database/`. Quando ha bisogno di dati, chiama un
-  facade. Quando deve mostrare risultati, parla al Boundary.
-- **Il Boundary** non importa nulla da `controller/` ne' da `database/`.
-  Espone metodi: `getPanel()`, `addXListener(...)` per registrare azioni
-  utente, setter per ricevere dati gia' pronti dal Controller.
+  `GestoreRegistroDocente`, `GestoreAggiornamentiRegistro`) parlano
+  con `database/`. Espongono un'API di alto livello e nascondono i
+  dettagli di JPQL, `EntityManager`, fetch type. Il Controller non
+  istanzia mai `new GestorePersistenza()` ne' importa da `database/`.
+- **Il Controller** (`GestoreServiziStudente`, `GestoreServiziDocente`)
+  e' una classe **stateless**: solo metodi `public static`, niente
+  campi, niente `JFrame`/`JDialog`/`Listener`, niente
+  `import javax.swing`. Riceve dati grezzi o Entity dal Boundary,
+  delega ai facade, ritorna Entity / `boolean` / `double`. Tutta la
+  logica UI (apertura finestre, navigazione tra form, gestione listener)
+  vive nel Boundary.
+- **Il Boundary** possiede:
+  - il proprio `JFrame` (o `JDialog`) come campo di istanza, creato
+    da un metodo `apriXxx()` che e' l'entry point del Boundary;
+  - i propri listener, registrati nel **costruttore** (leggono i campi
+    di istanza, incluso `frame`, al momento del click);
+  - le **guardie sugli input** (campi vuoti, intervallo date invertito,
+    scadenza prima dell'assegnazione, studente non selezionato): tutte
+    nel listener del Boundary, prima di chiamare il Controller.
+  - La navigazione tra finestre e' **Boundary -> Boundary**: nel
+    listener si fa `frame.dispose()` + `new AltroBoundary().apriAltroBoundary()`.
 
-Conseguenza: il punto di contatto tra UI ed evento utente e' sempre un
-listener Swing registrato dal Controller sul Boundary; il punto di
-contatto tra business e persistenza e' sempre un metodo di un facade.
+Conseguenza: il punto di contatto UI -> business e' una chiamata
+`GestoreServiziXxx.metodoStatic(...)` dentro un listener del Boundary.
+Il punto di contatto business -> persistenza e' sempre un metodo di un
+facade in `entity/`.
 
 ---
 
@@ -136,39 +162,55 @@ contatto tra business e persistenza e' sempre un metodo di un facade.
 ### `app/`
 - **`MainAvviaApp.java`** — entry point. `main` prima imposta
   `UIManager.setLookAndFeel(systemLookAndFeelClassName)` (su macOS attiva
-  Aqua, necessario per il segmented control di `FormAggiornaRegistro`;
-  try/catch silenzioso se il L&F non c'e'), poi avvia su EDT
-  (`SwingUtilities.invokeLater`) il metodo statico privato
-  `avviaInterfaccia()`, che mostra `FormSceltaUtente`.
+  Aqua, necessario per il segmented control di `FormAggiornaRegistro` /
+  `FormConsultaRegistro` / `FormVisualizzazioneProfilo`; try/catch
+  silenzioso se il L&F non c'e'), poi su EDT
+  (`SwingUtilities.invokeLater`) fa `new FormSceltaUtente().apriSceltaUtente()`.
+  Niente import `controller/*`: la navigazione e' interamente Boundary -> Boundary.
 
 ### `boundary/`
-Tutti i form sono bound a un `.form` di IntelliJ GUI Designer (eccezione
-storica: nessuna). Tutti espongono `getPanel()` (root `JPanel`) e i
-listener/setter elencati.
+Tutti i form sono bound a un `.form` di IntelliJ GUI Designer. Pattern
+uniforme (esempio del professore):
+- Campo di istanza `private JFrame frame` (o `JDialog dialog`).
+- Costruttore: registra tutti i listener interni, comprese le guardie
+  sugli input e le chiamate al Controller static.
+- Metodo entry point `apriXxx() : JFrame` (oppure `apriDialog(parent)`
+  per i dialog): inizializza eventuali dati, crea il JFrame/JDialog, lo
+  mostra, lo ritorna.
+- Niente piu' `addXxxListener` esposti esternamente: i listener sono
+  interni al Boundary. I setter (`setClasse`, `setClassi`, ecc.)
+  restano per propagare dati dal chiamante.
 
 - **`FormSceltaUtente.java`** (+ `.form`) — schermata iniziale. Bottoni
-  "Studente" e "Docente".
-  API: `getPanel`, `addStudenteListener(ActionListener)`,
-  `addDocenteListener(ActionListener)`.
+  "Studente" e "Docente". I listener interni fanno `frame.dispose()` +
+  apertura del Boundary successivo (`new FormServiziStudente().apriFormServiziStudente()`
+  o `new FormServiziDocente().apriFormServiziDocente()`).
+  API: `apriSceltaUtente() : JFrame`.
 - **`FormServiziStudente.java`** (+ `.form`) — login studente. Solo
   `fieldNome` + `fieldCognome` + `labelErrore` + `buttonConferma`
   (niente combo classi: la scelta della classe avviene dopo, nel popup
-  `FormSceltaClasse`).
-  API: `getPanel`, `getNomeInserito`, `getCognomeInserito`,
-  `mostraErrore(String)`, `pulisciErrore()`,
-  `addConfermaListener(ActionListener)`.
+  `FormSceltaClasse`). Listener Conferma interno: applica le guardie
+  (nome/cognome vuoti, studente non trovato via
+  `GestoreServiziStudente.cercaStudente`, lista classi vuota via
+  `classiDi`), poi apre `FormSceltaClasse` modale e, su conferma, apre
+  il profilo (`new FormVisualizzazioneProfilo().apriProfilo(studente, classe)`).
+  API: `apriFormServiziStudente() : JFrame` + `mostraErrore`/`pulisciErrore`
+  (usati internamente, lasciati `public`).
 - **`FormServiziDocente.java`** (+ `.form`) — login docente, **speculare**
-  a `FormServiziStudente` (stessa struttura, titolo "Accesso Docente").
-  Stessa API.
+  a `FormServiziStudente`. Stessa struttura, titolo "Accesso Docente",
+  stesso pattern di guardie + chiamata a `GestoreServiziDocente.cercaDocente`/
+  `classiDi`. Su conferma classe apre
+  `new FormGestioneRegistro().apriGestioneRegistro(docente, classe)`.
+  API: `apriFormServiziDocente() : JFrame`.
 - **`FormSceltaClasse.java`** (+ `.form`) — popup modale per scegliere
-  la classe DOPO il login. `JPanel` bound a `.form`; il Controller lo
-  wrappa in un `JDialog` `APPLICATION_MODAL` (non un `JFrame`: e' una
-  scelta secondaria sopra al login). Combo classi + bottoni
-  Annulla/Conferma. Su Annulla / X il dialog si chiude restituendo
-  `null`; su Conferma restituisce la classe selezionata.
-  API: `getPanel`, `setClassi(List<ClasseVirtuale>)`,
-  `getClasseSelezionata`, `addConfermaListener(ActionListener)`,
-  `addAnnullaListener(ActionListener)`.
+  la classe DOPO il login. Il Boundary possiede il proprio `JDialog`
+  (`APPLICATION_MODAL`, non un `JFrame`: e' una scelta secondaria
+  sopra al login). Listener Annulla interno (dispose del dialog).
+  API: `setClassi(List<ClasseVirtuale>)`, `getClasseSelezionata`,
+  `addConfermaListener(ActionListener)` (il client esterno reagisce alla
+  conferma), `apriDialog(JFrame parent)` (bloccante: `APPLICATION_MODAL`),
+  `chiudiDialog()` (il client esterno lo chiama dentro il proprio
+  Conferma listener per chiudere il dialog dopo aver letto la classe).
 - **`FormVisualizzazioneProfilo.java`** (+ `.form`) — profilo studente,
   completo. Layout 4 righe: Back (alto-sinistra, 80x24), label nome
   "Profilo di {Nome} {Cognome}" centrata (font 22 bold), sub-toggle bar
@@ -194,10 +236,14 @@ listener/setter elencati.
   `<font color>`), ottenendo gratuitamente l'item multi-riga (titolo bold +
   descrizione in italic grigio). Formattazione fatta dentro i setter del
   Boundary (presentazione = responsabilita' del Boundary).
-  API: `getPanel`, `mostraProfilo(Studente, ClasseVirtuale)` (setta la
-  label nome), `addBackListener(ActionListener)`,
+  Listener Back interno (dispose del frame + riapre
+  `new FormServiziStudente().apriFormServiziStudente()`).
+  API: `apriProfilo(Studente, ClasseVirtuale) : JFrame` (entry point:
+  setta la label nome, carica le 3 liste + media via
+  `GestoreServiziStudente.visualizzaLezioni/Compiti/Valutazioni` +
+  `calcolaMediaStudente`, crea il JFrame e lo mostra),
   `setLezioni(List<Lezione>)` / `setCompiti(List<Compito>)` /
-  `setValutazioni(List<Valutazione>)` (clear del model + ciclo con
+  `setValutazioni(List<Valutazione>)` (usati internamente,
   formattazione HTML degli item), `setMediaStudente(double)` (formatta
   il double "grezzo" del facade con `%.2f`).
 - **`FormGestioneRegistro.java`** (+ `.form`) — schermata principale
@@ -243,13 +289,13 @@ listener/setter elencati.
     `pulisciMessaggioXxx()`, `pulisciCampiXxx()`. Per Valutazione in
     piu': `setStudentiClasse(List<Studente>)` per popolare la combo
     studenti.
-- **`FormConsultaRegistro.java`** (**senza `.form`**, costruito
-  programmaticamente) — sotto-form del docente agganciato a
-  `panelContenuto` di `FormGestioneRegistro` quando il toggle "Consulta
-  Registro" e' selezionato. Eccezione storica al pattern dei form bound
-  a `.form`: l'utente ha scelto di evitare l'overhead di scrivere XML
-  IntelliJ Designer per un form lineare. La struttura segue 1:1 il
-  pattern di `FormVisualizzazioneProfilo` per le prime due viste.
+- **`FormConsultaRegistro.java`** (+ `.form`) — sotto-form del docente
+  agganciato a `panelContenuto` di `FormGestioneRegistro` quando il
+  toggle "Consulta Registro" e' selezionato. Stessa struttura "shell"
+  di `FormAggiornaRegistro`: il `.form` definisce la sub-toggle bar e
+  `panelContenuto`; il contenuto dinamico (liste + `panelMonitora`) e'
+  costruito programmaticamente nel costruttore. La struttura segue 1:1
+  il pattern di `FormVisualizzazioneProfilo` per le prime due viste.
   Layout 2 righe: sub-toggle bar (Lezioni / Compiti / Monitora — stesso
   stile del profilo studente: 95x22, font 11 bold, segmented client
   properties per il look nativo macOS) + `panelContenuto` con bordo
@@ -646,14 +692,18 @@ Identico a 6.2.3, sostituendo `Studente` con `Docente` e
 Trigger: click su `toggleAggiorna` o `toggleConsulta`.
 
 1. L'`ActionListener` registrato nel costruttore del form chiama
-   `mostraSotto(panelAggiorna)` o `mostraSotto(panelConsulta)`.
-2. `mostraSotto(JPanel sotto)`:
+   `mostraSotto(formAggiorna.getPanel())` o
+   `mostraSotto(formConsulta.getPanel())`.
+2. `mostraSotto(JComponent sotto)`:
    1. `panelContenuto.removeAll();`
    2. `panelContenuto.add(sotto, BorderLayout.CENTER);`
    3. `panelContenuto.revalidate(); panelContenuto.repaint();`
-3. Il Controller non viene coinvolto. **I casi d'uso interni
-   (Aggiorna/Consulta) sono placeholder vuoti**; saranno implementati
-   nello step successivo.
+3. Il Controller non viene coinvolto nel solo switch. Entrambi i
+   sotto-form sono **veri Boundary** (`FormAggiornaRegistro` /
+   `FormConsultaRegistro`), gia' agganciati e popolati: il loro
+   wiring (listener Salva e Mostra, popolamento liste, ecc.) e' stato
+   fatto una volta sola da `GestoreServiziDocente.apriGestioneRegistro`
+   alla creazione del frame.
 
 ### 6.4 Back / navigazione
 
@@ -831,15 +881,21 @@ fabbisogno corrente ma utili per accessi futuri fuori dall'`EntityManager`):
 - Boundary: `FormVisualizzazioneProfilo` con sub-toggle Lezioni/Compiti/
   Valutazioni + 3 `JList<String>` scrollabili. Item formattati come
   stringhe HTML interpretate dal renderer di default (niente
-  `ListCellRenderer` custom).
+  `ListCellRenderer` custom). Liste read-only via `ListSelectionModel`
+  no-op condiviso (niente evidenziazione appiccicata al click). Per
+  Valutazioni in piu': **label "Media: X.XX" in basso a destra** del
+  container, fissa (non scrolla con la lista).
 - Controller: `apriProfilo` chiama il privato `visualizzaProfilo(form,
   studente, classe)` che chiede al facade le 3 liste e le pusha al
-  Boundary.
+  Boundary; tiene la lista valutazioni in variabile locale per riusarla
+  in `gv.calcolaMediaStudente(valutazioni)` -> `setMediaStudente`
+  (no doppio fetch al DB).
 - Facade: `gv.visualizzaLezioni/Compiti/Valutazioni` usano i metodi
   CRUD generici originali del professore (`cercaPerCampo` su
   `classeVirtuale` per Lezione/Compito, `cercaPerCampi` su
-  `studenteValutato`+`classeVirtuale` per Valutazione). Niente
-  estensioni di `GestorePersistenza` per questo caso d'uso.
+  `studenteValutato`+`classeVirtuale` per Valutazione).
+  `calcolaMediaStudente(List<Valutazione>)` con guard isEmpty -> 0.0.
+  Niente estensioni di `GestorePersistenza` per questo caso d'uso.
 
 **Caso d'uso "Aggiorna Registro" — completo end-to-end** (tutti e 3
 i sotto-casi, vedi sezione 14 per il flow dettagliato):
@@ -858,6 +914,30 @@ i sotto-casi, vedi sezione 14 per il flow dettagliato):
   Valutazione` che fanno la catena "crea (facade A) + registra (facade B)"
   e propagano boolean per feedback UI.
 
+**Caso d'uso "Consulta Registro" — completo end-to-end** (vedi UC6
+sez. 14 per il flow dettagliato):
+- Boundary: `FormConsultaRegistro` (+ `.form` per la sub-toggle bar e
+  il panelContenuto; il `panelMonitora` e le liste sono costruiti
+  programmaticamente nel costruttore) con
+  sub-toggle Lezioni/Compiti/Monitora identico per stile a quello del
+  profilo studente. Lezioni e Compiti sono JList HTML read-only
+  (selezione disabilitata). Monitora: spinner Da/A (default 01/09 anno
+  scolastico corrente -> oggi) + bottone Mostra + label messaggio;
+  sotto, lista valutazioni filtrate con formato
+  `Nome Cognome — voto — tipologia — data` + label "Media: X.XX" in
+  basso a destra.
+- Controller: in `apriGestioneRegistro` popola Lezioni/Compiti una sola
+  volta all'apertura (non dipendono dall'intervallo) e registra il
+  listener "Mostra" con validazione `a.isBefore(da)` -> errore rosso.
+  L'orchestratore privato `consultaRegistro(form, classe, da, a)`
+  chiama il facade e pusha al Boundary.
+- Facade: `gestoreRegistroDocente.visualizzaLezioni/Compiti(classe)`
+  per il toggle Lezioni/Compiti;
+  `visualizzaValutazioniConIntervallo(classe, da, a)` per Monitora
+  (fetch totale + filtro Java sul campo data);
+  `calcolaMediaClasse(valutazioni)` per la media. Niente estensioni
+  di `GestorePersistenza`.
+
 **Entity tweaks effettuati**:
 - `ClasseVirtuale`: `toString()` (per render combo), `equals/hashCode`
   per id, getter `getDocenteReferente()`.
@@ -875,9 +955,12 @@ i sotto-casi, vedi sezione 14 per il flow dettagliato):
   - `cercaPerClasse(ClasseVirtuale)` per "Classe -> studenti"
 
 **Facade aggiornati**:
-- `GestoreVisualizzazione`: `cercaStudente`, `classiDi(Studente)`.
+- `GestoreVisualizzazione`: `cercaStudente`, `classiDi(Studente)`,
+  `visualizzaLezioni/Compiti/Valutazioni`, `calcolaMediaStudente`.
 - `GestoreRegistroDocente`: `cercaDocente`, `classiDi(Docente)`,
-  `cercaStudenti(ClasseVirtuale)`, `registraLezione/Compito/Valutazione`.
+  `cercaStudenti(ClasseVirtuale)`, `registraLezione/Compito/Valutazione`,
+  `visualizzaLezioni/Compiti`, `visualizzaValutazioniConIntervallo`,
+  `calcolaMediaClasse`.
 - `GestoreAggiornamentiRegistro`: `creaLezione/Compito/Valutazione`
   (creatore di Entity, niente DB).
 
@@ -885,29 +968,34 @@ i sotto-casi, vedi sezione 14 per il flow dettagliato):
 
 ## 10. Cosa rimane
 
-**Prossimo step concordato**: implementare il secondo caso d'uso del
-docente:
+I 5 casi d'uso pianificati nel perimetro del progetto sono **tutti
+implementati end-to-end** (UC1 e UC2 login, UC3/UC4/UC5 Aggiorna
+Registro, UC6 Consulta Registro, UC7 Visualizza Profilo Studente con
+media). Quello che resta sono raffinamenti o estensioni opzionali, da
+valutare con l'utente prima di toccare codice:
 
-- **Consulta Registro**: visualizzazione (probabilmente liste/tabelle)
-  di Lezione/Compito/Valutazione della classe. Verra' delegato a
-  `GestoreRegistroDocente` (espandendo metodi come `mostraRegistro`,
-  `monitoraAndamento`, `calcolaMediaClasse`).
+- **Autenticazione vera (password)**: oggi il login matcha solo
+  nome+cognome. Lo schema DB ha gia' il campo `password` (vedi sez. 1),
+  ma non viene controllato. Aggiungere la password al form di login
+  + verifica nel facade `cercaStudente`/`cercaDocente` (eventualmente
+  con hash, non plain text). **Fuori scope** salvo richiesta esplicita.
+- **Gestione omonimi**: oggi `cercaStudente`/`cercaDocente` usano
+  `cercaPrimoPerCampi` e prendono il primo match. Per gestirli servirebbe
+  un popup di disambiguazione, simile a `FormSceltaClasse`.
+- **Visualizzazione media in testa al pannello Valutazioni** anziche'
+  in basso a destra — pura scelta UX, da discutere.
+- **Filtro Java vs JPQL `BETWEEN`** per `visualizzaValutazioniConIntervallo`:
+  oggi va bene il filtro Java per il volume del progetto. Per dataset
+  grandi conviene estendere `GestorePersistenza` con una query JPQL
+  (richiede autorizzazione esplicita).
+- **Consulta Registro lato Compiti/Lezioni con filtro per intervallo**:
+  oggi solo Monitora (valutazioni) supporta l'intervallo. Se servisse,
+  si potrebbe aggiungere lo stesso meccanismo a Lezioni/Compiti.
+- **Tipologia di valutazione configurabile**: oggi enum a 2 valori
+  (`PROVA_SCRITTA`/`PROVA_ORALE`). Espandere se utile.
 
-**Step ulteriori**:
-
-- Calcolo medie nel profilo studente: oggi le valutazioni si vedono
-  ma non c'e' una media. `calcolaMediaStudente` di `GestoreVisualizzazione`
-  e' ancora stub. Eventualmente da mostrare in testa al pannello
-  Valutazioni del profilo.
-- Eventuale autenticazione vera (password): non in scope, da decidere.
-
-**Step successivi (oltre il toggle)**:
-
-- Profilo studente reale: voti, lezioni, compiti, calcolo medie. Verra'
-  delegato a `GestoreVisualizzazione` (`calcolaMediaStudente`,
-  `visualizzaLezioni`, `visualizzaCompiti`, `visualizzaValutazioni` —
-  oggi stub).
-- Eventuale autenticazione vera (password): non in scope, da decidere.
+A regime: niente "step concordato" pendente. Il prossimo task arriva
+quando l'utente lo definisce.
 
 ---
 
@@ -953,6 +1041,39 @@ docente:
   Per consentire un eventuale "Back fino alla scelta utente" andrebbe
   reso `public static` (decisione rinviata: l'utente non vuole il Back
   in `FormSceltaUtente`).
+- **`LocalDate.isBefore/isAfter` sono strict**: l'intervallo inclusivo
+  `da <= data <= a` si scrive con doppia negazione
+  `!data.isBefore(da) && !data.isAfter(a)` (vedi
+  `visualizzaValutazioniConIntervallo`). `LocalDate` non supporta `<`
+  `>` `==` perche' e' un oggetto: usare i metodi.
+- **`Math.round(double)` ritorna `long`, NON un double a 2 decimali**:
+  e' stato un errore facile da fare nel facade `calcolaMediaStudente`.
+  Per la presentazione a 2 cifre usare sempre `String.format("%.2f", x)`
+  lato Boundary; il facade ritorna `double` "grezzo".
+- **`somma / valutazioni.size()` con lista vuota su `double` ritorna
+  `NaN`**, non `0.0`. Sia `calcolaMediaStudente` che `calcolaMediaClasse`
+  hanno una guardia esplicita `isEmpty() -> return 0.0` per evitarlo:
+  il Boundary mostra "Media: 0.00" anziche' "Media: NaN".
+- **JList "selezione appiccicata"**: cliccando un item di una `JList`,
+  Swing lo evidenzia per default (sfondo blu) anche su liste
+  puramente di display. Per disabilitare la selezione "in modo
+  intent-esplicito" si sovrascrive il `ListSelectionModel` con uno
+  no-op (override `setSelectionInterval` e `addSelectionInterval` con
+  stub vuoti). E' il pattern adottato in `FormVisualizzazioneProfilo` e
+  `FormConsultaRegistro`. Alternative (`setEnabled(false)`, colori
+  di selezione = background) sono meno pulite.
+- **Label media dentro lo `JScrollPane`?** No: la `labelMedia` del
+  profilo studente e di Monitora e' avvolta in un `JPanel` con
+  `BorderLayout` insieme allo scroll (`scroll` al CENTER, `label` al
+  SOUTH). La label e' fuori dal viewport scrollabile: resta sempre
+  visibile in basso a destra anche quando la lista ha molti item.
+- **`UnsupportedOperationException` da stub**: durante lo sviluppo,
+  metodi non ancora implementati possono lanciare
+  `throw new UnsupportedOperationException()`. Va rimosso quando si
+  scrive l'orchestratore vero — un test "click che non fa nulla" e'
+  meno chiaro di un'eccezione, ma in produzione lo stub deve sparire.
+  Esempio rimosso: `GestoreServiziDocente.consultaRegistro()` stub
+  pubblico -> orchestratore privato `consultaRegistro(form, classe, da, a)`.
 
 ---
 
@@ -1158,10 +1279,70 @@ corretti.
 
 ### UC6 — Consulta Registro
 
-**Non ancora implementato.** Toggle "Consulta Registro" presente in
-`FormGestioneRegistro`, ma il sotto-pannello e' un placeholder. Verra'
-delegato a `GestoreRegistroDocente` (metodi stub: `mostraRegistro`,
-`monitoraAndamento`, `calcolaMediaClasse`).
+- **Attore**: Docente autenticato su una classe.
+- **Precondizione**: UC2 completato; toggle "Consulta Registro"
+  selezionato (lo switch e' interno al Boundary).
+- **Catena BCED**:
+  `FormConsultaRegistro` -> `GestoreServiziDocente.consultaRegistro`
+  -> `GestoreRegistroDocente.visualizzaLezioni / visualizzaCompiti /
+  visualizzaValutazioniConIntervallo / calcolaMediaClasse`
+  -> `GestorePersistenza.cercaPerCampo`.
+
+**Flusso principale** (3 sotto-viste: Lezioni, Compiti, Monitora):
+
+1. All'apertura del registro (UC2), `apriGestioneRegistro` chiama
+   `formConsulta.setLezioni(gestoreRegistroDocente.visualizzaLezioni(classe))`
+   e
+   `formConsulta.setCompiti(gestoreRegistroDocente.visualizzaCompiti(classe))`.
+   Lezioni e Compiti vengono cosi' popolati una volta sola: la lista
+   della classe non cambia mentre la finestra resta aperta.
+2. Il docente clicca "Consulta Registro" sul togglebar di
+   `FormGestioneRegistro` -> `mostraSotto(formConsulta.getPanel())`.
+3. Sub-toggle iniziale: "Lezioni". Il docente vede subito le 15
+   lezioni della classe (formato HTML identico al profilo studente).
+4. Click sul sub-toggle "Compiti" -> `mostraSotto(scrollCompiti)`.
+   Vede i 15 compiti (titolo + assegnazione → scadenza + descrizione).
+5. Click sul sub-toggle "Monitora" -> `mostraSotto(panelMonitora)`.
+   - Spinner "Da" precompilato a 01/09 dell'anno scolastico corrente,
+     spinner "A" precompilato a oggi (calcolo dell'anno scolastico
+     basato sul mese: se >= 9 anno corrente, altrimenti precedente).
+   - La lista valutazioni e la media sono vuote / 0.00 finche' il
+     docente non clicca "Mostra".
+6. Click su "Mostra":
+   1. Controller: `formConsulta.pulisciMessaggioMonitora();`
+   2. Lettura date: `da = formConsulta.getDataDa()`,
+      `a = formConsulta.getDataA()` (conversione `Date -> LocalDate`
+      con `ZoneId.systemDefault()`).
+   3. Guardia G1: se `a.isBefore(da)` ->
+      `mostraErroreMonitora("La data finale non puo' essere prima
+      di quella iniziale")` + return.
+   4. Delega a `consultaRegistro(formConsulta, classe, da, a)`.
+7. L'orchestratore `consultaRegistro`:
+   1. `valutazioni = gestoreRegistroDocente.visualizzaValutazioniConIntervallo(classe, da, a)`
+      — fetch totale della classe + filtro Java sul campo data
+      (estremi inclusi, vedi sez. 7).
+   2. `form.setValutazioniMonitorate(valutazioni)` — formato HTML con
+      **nome studente** in testa: `"Nome Cognome — voto — tipologia
+      — data"` + descrizione in italic grigio.
+   3. `form.setMediaMonitorata(gestoreRegistroDocente.calcolaMediaClasse(valutazioni))`
+      — la stessa lista appena pushata viene riusata per la media,
+      niente doppio fetch al DB.
+
+**Guardie**:
+- G1 `a.isBefore(da)` -> "La data finale non puo' essere prima di
+  quella iniziale" (label rossa, `0xC62828`).
+- Niente guardia su date vuote: gli `SpinnerDateModel` garantiscono
+  sempre un valore valido.
+- Niente guardia su classi senza valutazioni: la guardia `isEmpty()` in
+  `calcolaMediaClasse` ritorna `0.0` -> "Media: 0.00" senza errori.
+
+**Esito**: il docente vede l'elenco valutazioni filtrate per intervallo
+(con il nome dello studente di ognuna) e la media calcolata su quella
+finestra temporale.
+
+**Limite onesto**: come per il profilo studente, l'HTML non escapa
+`<`, `>`, `&` nei testi dal DB. Per il perimetro didattico (dati
+controllati) e' accettabile.
 
 ---
 
@@ -1173,8 +1354,8 @@ delegato a `GestoreRegistroDocente` (metodi stub: `mostraRegistro`,
 - **Catena BCED**:
   `FormVisualizzazioneProfilo` <- `GestoreServiziStudente.visualizzaProfilo`
   -> `GestoreVisualizzazione.visualizzaLezioni / visualizzaCompiti /
-  visualizzaValutazioni` -> `GestorePersistenza.cercaPerCampo /
-  cercaPerCampi`.
+  visualizzaValutazioni / calcolaMediaStudente` ->
+  `GestorePersistenza.cercaPerCampo / cercaPerCampi`.
 
 **Flusso principale**:
 
@@ -1189,16 +1370,24 @@ delegato a `GestoreRegistroDocente` (metodi stub: `mostraRegistro`,
      "classeVirtuale", classe)`.
    - `gv.visualizzaCompiti(classe)` -> `cercaPerCampo(Compito.class,
      "classeVirtuale", classe)`.
-   - `gv.visualizzaValutazioni(studente, classe)` ->
+   - `valutazioni = gv.visualizzaValutazioni(studente, classe)` ->
      `cercaPerCampi(Valutazione.class, Map.of("studenteValutato",
      studente, "classeVirtuale", classe))`. Filtro a 2 campi:
      fondamentale perche' uno studente puo' essere iscritto a piu'
      classi e vogliamo SOLO le valutazioni nella classe corrente.
+     **La lista viene tenuta in una variabile locale** per riusarla
+     al passo 4 (no doppio fetch).
 4. Le 3 liste vengono pushate al Boundary via `setLezioni`,
    `setCompiti`, `setValutazioni`. Ognuno fa `model.clear()` + ciclo
    con formattazione HTML degli item.
-5. `frame.setVisible(true)` -> la finestra si apre con le liste gia'
-   popolate. Toggle iniziale: Lezioni.
+5. Calcolo della media: `gv.calcolaMediaStudente(valutazioni)` (la
+   stessa lista riusata dal passo 3) -> `setMediaStudente(double)`.
+   Il facade ritorna il `double` "grezzo"; il Boundary formatta con
+   `String.format("%.2f", media)` -> "Media: X.XX" in basso a destra
+   del container Valutazioni (sempre visibile, non scrolla con la
+   lista).
+6. `frame.setVisible(true)` -> la finestra si apre con le liste gia'
+   popolate e la media gia' calcolata. Toggle iniziale: Lezioni.
 
 **Rendering degli item (no `ListCellRenderer` custom)**:
 Ogni elemento del model e' una stringa HTML che inizia con `<html>`.
@@ -1212,9 +1401,12 @@ sulla seconda. Formato per tipo:
 
 **Guardie**: nessuna. Se una lista e' vuota (es. lo studente non ha
 valutazioni in quella classe) il `JScrollPane` resta vuoto, niente
-errore.
+errore. La media su lista vuota e' gestita dalla guardia
+`isEmpty() -> 0.0` nel facade: il Boundary mostra "Media: 0.00"
+senza errori.
 
-**Esito**: profilo aperto e popolato; Back riporta al login studente.
+**Esito**: profilo aperto e popolato (lezioni + compiti + valutazioni
++ media); Back riporta al login studente.
 
 **Limite onesto**: l'HTML del trucco non escapa `<`, `>`, `&` presenti
 nei testi dal DB. Per il perimetro didattico (dati controllati) e'

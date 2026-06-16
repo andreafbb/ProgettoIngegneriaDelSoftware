@@ -1,5 +1,9 @@
 package boundary;
 
+import com.intellij.uiDesigner.core.GridConstraints;
+import com.intellij.uiDesigner.core.GridLayoutManager;
+import controller.GestoreServiziDocente;
+import entity.ClasseVirtuale;
 import entity.Compito;
 import entity.Lezione;
 import entity.Studente;
@@ -7,7 +11,6 @@ import entity.Valutazione;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionListener;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -30,22 +33,21 @@ import java.util.List;
  *    nelle valutazioni anche il NOME dello studente valutato, in piu'
  *    rispetto al profilo studente.
  *
- * NB: questo Form e' costruito tutto programmaticamente (niente .form
- * IntelliJ). Il pattern resta lo stesso dei form bound a .form: getPanel(),
- * setter per i dati, addXxxListener per i trigger.
+ * La struttura statica (root + subbar + panelContenuto) e' bound a
+ * FormConsultaRegistro.form (IntelliJ GUI Designer). Il contenuto dinamico
+ * — JList, panelMonitora e listener — resta costruito programmaticamente
+ * nel costruttore, stesso pattern di FormAggiornaRegistro.
  */
 public class FormConsultaRegistro {
 
     /*
-     * Root del form: in alto la sub-toggle bar, in basso il panelContenuto.
+     * Campi bound al .form: popolati dal $$$setupUI$$$ generato da IntelliJ.
      */
-    private final JPanel panel1 = new JPanel(new BorderLayout(0, 10));
-
-    private final JToggleButton toggleLezioni = new JToggleButton("Lezioni");
-    private final JToggleButton toggleCompiti = new JToggleButton("Compiti");
-    private final JToggleButton toggleMonitora = new JToggleButton("Monitora");
-
-    private final JPanel panelContenuto = new JPanel(new BorderLayout(0, 0));
+    private JPanel panel1;
+    private JToggleButton toggleLezioni;
+    private JToggleButton toggleCompiti;
+    private JToggleButton toggleMonitora;
+    private JPanel panelContenuto;
 
     /*
      * Liste read-only per Lezioni e Compiti — pattern identico a
@@ -79,9 +81,22 @@ public class FormConsultaRegistro {
     private final JLabel labelMedia = new JLabel("Media: 0.00", SwingConstants.RIGHT);
     private final JPanel panelRisultatoMonitora = new JPanel(new BorderLayout());
 
+    /*
+     * La ClasseVirtuale corrente, settata da FormGestioneRegistro tramite
+     * setClasse() all'apertura del registro. Lezioni e Compiti vengono
+     * popolati subito (non dipendono dall'intervallo); il listener Mostra
+     * la legge al click per chiedere al controller le valutazioni filtrate.
+     */
+    private ClasseVirtuale classe;
+
     public FormConsultaRegistro() {
 
-        // === Sub-toggle bar (Lezioni / Compiti / Monitora) ===
+        /*
+         * Client property dell'Aqua LookAndFeel di macOS: trasformano i tre
+         * JToggleButton in un segmented control nativo. Su L&F non Aqua queste
+         * property vengono ignorate silenziosamente: il toggle resta
+         * funzionale, solo non segmentato graficamente.
+         */
         toggleLezioni.putClientProperty("JButton.buttonType", "segmented");
         toggleLezioni.putClientProperty("JButton.segmentPosition", "first");
         toggleCompiti.putClientProperty("JButton.buttonType", "segmented");
@@ -89,32 +104,17 @@ public class FormConsultaRegistro {
         toggleMonitora.putClientProperty("JButton.buttonType", "segmented");
         toggleMonitora.putClientProperty("JButton.segmentPosition", "last");
 
-        toggleLezioni.setFont(new Font("SansSerif", Font.BOLD, 11));
-        toggleCompiti.setFont(new Font("SansSerif", Font.BOLD, 11));
-        toggleMonitora.setFont(new Font("SansSerif", Font.BOLD, 11));
-
-        Dimension dimToggle = new Dimension(95, 22);
-        toggleLezioni.setPreferredSize(dimToggle);
-        toggleCompiti.setPreferredSize(dimToggle);
-        toggleMonitora.setPreferredSize(dimToggle);
-
         ButtonGroup gruppo = new ButtonGroup();
         gruppo.add(toggleLezioni);
         gruppo.add(toggleCompiti);
         gruppo.add(toggleMonitora);
 
-        JPanel subbar = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
-        subbar.add(toggleLezioni);
-        subbar.add(toggleCompiti);
-        subbar.add(toggleMonitora);
-
         // === Costruzione panelMonitora ===
         buildPanelMonitora();
 
-        // === Composizione root ===
-        panel1.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        panel1.add(subbar, BorderLayout.NORTH);
-        panel1.add(panelContenuto, BorderLayout.CENTER);
+        // panelContenuto e' creato dal $$$setupUI$$$ (BorderLayout, niente
+        // bordo nel .form); la LineBorder grigia la setto qui perche' il
+        // Designer per i bordi a colore custom e' meno comodo.
         panelContenuto.setBorder(BorderFactory.createLineBorder(new Color(0xCCCCCC)));
 
         // Stato iniziale: vista "Lezioni"
@@ -133,6 +133,36 @@ public class FormConsultaRegistro {
         listLezioni.setSelectionModel(noSelection);
         listCompiti.setSelectionModel(noSelection);
         listMonitora.setSelectionModel(noSelection);
+
+        /*
+         * Listener Mostra. Guardia sull'intervallo (data finale prima della
+         * iniziale) nel Boundary; il Controller assume input gia' validato.
+         * Il facade fa il fetch totale della classe + filtro Java sul range.
+         */
+        buttonMostra.addActionListener(ev -> {
+            pulisciMessaggioMonitora();
+            LocalDate da = getDataDa();
+            LocalDate a = getDataA();
+            if (a.isBefore(da)) {
+                mostraErroreMonitora("La data finale non puo' essere prima di quella iniziale");
+                return;
+            }
+            List<Valutazione> valutazioni = GestoreServiziDocente.visualizzaValutazioniConIntervallo(classe, da, a);
+            setValutazioniMonitorate(valutazioni);
+            setMediaMonitorata(GestoreServiziDocente.calcolaMediaClasse(valutazioni));
+        });
+    }
+
+    /*
+     * Setta la ClasseVirtuale corrente e popola subito Lezioni/Compiti
+     * (non dipendono dall'intervallo, sono caricati una sola volta
+     * all'apertura). Le valutazioni invece dipendono dal range scelto
+     * dal docente e vengono caricate dal listener Mostra.
+     */
+    public void setClasse(ClasseVirtuale classe) {
+        this.classe = classe;
+        setLezioni(GestoreServiziDocente.visualizzaLezioni(classe));
+        setCompiti(GestoreServiziDocente.visualizzaCompiti(classe));
     }
 
     /*
@@ -290,10 +320,6 @@ public class FormConsultaRegistro {
                 .toLocalDate();
     }
 
-    public void addMostraListener(ActionListener listener) {
-        buttonMostra.addActionListener(listener);
-    }
-
     /*
      * Feedback "rosso" sull'header del Monitora — stesso pattern delle
      * label messaggio di FormAggiornaRegistro.
@@ -305,5 +331,49 @@ public class FormConsultaRegistro {
 
     public void pulisciMessaggioMonitora() {
         labelMessaggioMonitora.setText(" ");
+    }
+
+    {
+// GUI initializer generated by IntelliJ IDEA GUI Designer
+// >>> IMPORTANT!! <<<
+// DO NOT EDIT OR ADD ANY CODE HERE!
+        $$$setupUI$$$();
+    }
+
+    /**
+     * Method generated by IntelliJ IDEA GUI Designer
+     * >>> IMPORTANT!! <<<
+     * DO NOT edit this method OR call it in your code!
+     *
+     * @noinspection ALL
+     */
+    private void $$$setupUI$$$() {
+        panel1 = new JPanel();
+        panel1.setLayout(new GridLayoutManager(2, 1, new Insets(10, 10, 10, 10), 0, 10));
+        final JPanel subbar = new JPanel();
+        subbar.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), 0, 0, true, false));
+        panel1.add(subbar, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        toggleLezioni = new JToggleButton();
+        toggleLezioni.setFont(new Font("SansSerif", Font.BOLD, 11));
+        toggleLezioni.setText("Lezioni");
+        subbar.add(toggleLezioni, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(95, 22), null, 0, false));
+        toggleCompiti = new JToggleButton();
+        toggleCompiti.setFont(new Font("SansSerif", Font.BOLD, 11));
+        toggleCompiti.setText("Compiti");
+        subbar.add(toggleCompiti, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(95, 22), null, 0, false));
+        toggleMonitora = new JToggleButton();
+        toggleMonitora.setFont(new Font("SansSerif", Font.BOLD, 11));
+        toggleMonitora.setText("Monitora");
+        subbar.add(toggleMonitora, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(95, 22), null, 0, false));
+        panelContenuto = new JPanel();
+        panelContenuto.setLayout(new BorderLayout(0, 0));
+        panel1.add(panelContenuto, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+    }
+
+    /**
+     * @noinspection ALL
+     */
+    public JComponent $$$getRootComponent$$$() {
+        return panel1;
     }
 }

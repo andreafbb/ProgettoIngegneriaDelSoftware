@@ -2,11 +2,20 @@ package boundary;
 
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
+import controller.GestoreServiziDocente;
+import entity.ClasseVirtuale;
+import entity.Docente;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionListener;
+import java.util.List;
 
+/*
+ * Boundary del login docente. Speculare a FormServiziStudente: stessa
+ * struttura del .form (nome+cognome+errore+conferma), stessa API,
+ * stesso pattern del professore (apriXxx -> JFrame, listener nel
+ * costruttore, guardie nel Boundary, controller stateless).
+ */
 public class FormServiziDocente {
     private JPanel panel1;
     private JTextField fieldNome;
@@ -14,16 +23,76 @@ public class FormServiziDocente {
     private JLabel labelErrore;
     private JButton buttonConferma;
 
-    public JComponent getPanel() {
-        return panel1;
+    /*
+     * JFrame "di proprieta'" del Boundary, creato in apriFormServiziDocente().
+     * Tenerlo come campo permette al listener Conferma di chiuderlo prima
+     * di aprire la gestione registro.
+     */
+    private JFrame frame;
+
+    public FormServiziDocente() {
+
+        /*
+         * Listener Conferma: guardie sull'input qui nel Boundary, controller
+         * static per la ricerca + la lista delle classi. Su successo apre il
+         * popup FormSceltaClasse modale.
+         */
+        buttonConferma.addActionListener(e -> {
+
+            pulisciErrore();
+
+            String nome = fieldNome.getText().trim();
+            String cognome = fieldCognome.getText().trim();
+
+            if (nome.isEmpty() || cognome.isEmpty()) {
+                mostraErrore("Inserire nome e cognome");
+                return;
+            }
+
+            Docente docente = GestoreServiziDocente.cercaDocente(nome, cognome);
+            if (docente == null) {
+                mostraErrore("Docente non trovato");
+                return;
+            }
+
+            List<ClasseVirtuale> classi = GestoreServiziDocente.classiDi(docente);
+            if (classi.isEmpty()) {
+                mostraErrore("Nessuna classe associata a questo docente");
+                return;
+            }
+
+            apriSceltaClasse(docente, classi);
+        });
     }
 
-    public String getNomeInserito() {
-        return fieldNome.getText().trim();
+    /*
+     * Popup modale per la scelta classe. Su Conferma chiude dialog +
+     * login e apre la gestione registro: navigazione Boundary -> Boundary.
+     */
+    private void apriSceltaClasse(Docente docente, List<ClasseVirtuale> classi) {
+        FormSceltaClasse formScelta = new FormSceltaClasse();
+        formScelta.setClassi(classi);
+        formScelta.addConfermaListener(e -> {
+            ClasseVirtuale scelta = formScelta.getClasseSelezionata();
+            formScelta.chiudiDialog();
+            frame.dispose();
+            new FormGestioneRegistro().apriGestioneRegistro(docente, scelta);
+        });
+        formScelta.apriDialog(frame);
     }
 
-    public String getCognomeInserito() {
-        return fieldCognome.getText().trim();
+    /*
+     * Entry point del Boundary. Crea il JFrame, lo mostra; il listener
+     * Conferma (registrato nel costruttore) prende in carico il resto.
+     */
+    public JFrame apriFormServiziDocente() {
+        frame = new JFrame("Accesso Docente");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setContentPane(panel1);
+        frame.setSize(500, 400);
+        frame.setLocationRelativeTo(null);
+        frame.setVisible(true);
+        return frame;
     }
 
     public void mostraErrore(String messaggio) {
@@ -32,10 +101,6 @@ public class FormServiziDocente {
 
     public void pulisciErrore() {
         labelErrore.setText(" ");
-    }
-
-    public void addConfermaListener(ActionListener listener) {
-        buttonConferma.addActionListener(listener);
     }
 
     {

@@ -2,6 +2,7 @@ package boundary;
 
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
+import controller.GestoreServiziStudente;
 import entity.ClasseVirtuale;
 import entity.Compito;
 import entity.Lezione;
@@ -13,7 +14,6 @@ import javax.swing.border.TitledBorder;
 import javax.swing.plaf.FontUIResource;
 import javax.swing.text.StyleContext;
 import java.awt.*;
-import java.awt.event.ActionListener;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
@@ -44,6 +44,15 @@ public class FormVisualizzazioneProfilo {
     private JToggleButton toggleCompiti;
     private JToggleButton toggleValutazioni;
     private JPanel panelContenuto;
+
+    /*
+     * JFrame "di proprieta'" di questo Boundary, creato in apriProfilo().
+     * Tenerlo come campo di istanza ci permette di chiuderlo dal listener
+     * "Indietro" registrato nel costruttore (vedi sotto): la lambda cattura
+     * `this` e legge il campo nel momento del click, quando ormai apriProfilo
+     * lo ha gia' valorizzato.
+     */
+    private JFrame frame;
 
     /*
      * Model + JList + JScrollPane per ognuna delle tre liste.
@@ -125,6 +134,16 @@ public class FormVisualizzazioneProfilo {
         listLezioni.setSelectionModel(noSelection);
         listCompiti.setSelectionModel(noSelection);
         listValutazioni.setSelectionModel(noSelection);
+
+        /*
+         * Back: chiudo questo frame e riapro il login studente. La lambda
+         * legge il campo `frame` al momento del click — apriProfilo lo
+         * avra' gia' valorizzato.
+         */
+        buttonBack.addActionListener(e -> {
+            frame.dispose();
+            new FormServiziStudente().apriFormServiziStudente();
+        });
     }
 
     public JComponent getPanel() {
@@ -132,15 +151,40 @@ public class FormVisualizzazioneProfilo {
     }
 
     /*
-     * Imposta lo studente nella label di intestazione.
-     * Le tre liste vengono popolate separatamente (vedi step successivi).
+     * Entry point del Boundary, pattern del professore (apriXxx -> JFrame).
+     *
+     * Carica i dati dal controller, popola la UI, crea il JFrame e lo
+     * mostra. Niente piu' Controller che fa setContentPane / setVisible:
+     * il Boundary possiede il proprio frame.
+     *
+     * Chiamato dal listener "Conferma" di FormSceltaClasse (dopo che lo
+     * studente ha scelto la classe). Il listener Back, registrato qui
+     * nel costruttore, chiude `frame` e riapre il login.
      */
-    public void mostraProfilo(Studente studente, ClasseVirtuale classe) {
-        labelProfilo.setText("Profilo di " + studente.getNome() + " " + studente.getCognome());
-    }
+    public JFrame apriProfilo(Studente studente, ClasseVirtuale classe) {
 
-    public void addBackListener(ActionListener listener) {
-        buttonBack.addActionListener(listener);
+        labelProfilo.setText("Profilo di " + studente.getNome() + " " + studente.getCognome());
+
+        /*
+         * Tiro fuori dal controller le 3 liste + la media. La lista
+         * valutazioni la tengo in locale per riusarla nel calcolo media
+         * (il controller, stateless, accetta la lista invece di rifare il
+         * fetch al DB).
+         */
+        setLezioni(GestoreServiziStudente.visualizzaLezioni(classe));
+        setCompiti(GestoreServiziStudente.visualizzaCompiti(classe));
+        List<Valutazione> valutazioni = GestoreServiziStudente.visualizzaValutazioni(studente, classe);
+        setValutazioni(valutazioni);
+        setMediaStudente(GestoreServiziStudente.calcolaMediaStudente(valutazioni));
+
+        frame = new JFrame("Profilo Studente");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setContentPane(panel1);
+        frame.setSize(500, 400);
+        frame.setLocationRelativeTo(null);
+        frame.setVisible(true);
+
+        return frame;
     }
 
     /*

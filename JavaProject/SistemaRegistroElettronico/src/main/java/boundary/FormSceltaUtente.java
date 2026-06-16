@@ -5,35 +5,51 @@ import com.intellij.uiDesigner.core.GridLayoutManager;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionListener;
 
+/*
+ * Boundary di root: la prima schermata che vede l'utente
+ * ("Come vuoi accedere?" + bottoni Studente/Docente).
+ *
+ * Pattern del professore: i listener dei bottoni sono registrati nel
+ * costruttore del Boundary; apriSceltaUtente() crea il JFrame e lo mostra.
+ * Su click chiude il proprio frame e apre il Boundary del flow scelto
+ * (Boundary -> Boundary, senza passare dal Controller per la navigazione).
+ */
 public class FormSceltaUtente {
     private JPanel panel1;
     private JButton buttonStudente;
     private JButton buttonDocente;
 
     /*
-     * Restituisce il pannello principale del form
-     * Il Main lo usera' per inserirlo dentro al JFrame
+     * JFrame "di proprieta'" del Boundary, creato in apriSceltaUtente().
+     * Tenerlo come campo permette ai listener (registrati nel costruttore)
+     * di chiamarlo al momento del click.
      */
-    public JComponent getPanel() {
-        return panel1;
+    private JFrame frame;
+
+    public FormSceltaUtente() {
+        buttonStudente.addActionListener(e -> {
+            frame.dispose();
+            new FormServiziStudente().apriFormServiziStudente();
+        });
+        buttonDocente.addActionListener(e -> {
+            frame.dispose();
+            new FormServiziDocente().apriFormServiziDocente();
+        });
     }
 
     /*
-     * Aggancia un listener al click del bottone "Studente"
-     * Il Main lo usera' per avviare il flow studente
+     * Entry point del Boundary: crea il JFrame root e lo mostra.
+     * Chiamato direttamente da MainAvviaApp dentro l'EDT.
      */
-    public void addStudenteListener(ActionListener listener) {
-        buttonStudente.addActionListener(listener);
-    }
-
-    /*
-     * Aggancia un listener al click del bottone "Docente"
-     * Il Main lo usera' per avviare il flow docente
-     */
-    public void addDocenteListener(ActionListener listener) {
-        buttonDocente.addActionListener(listener);
+    public JFrame apriSceltaUtente() {
+        frame = new JFrame("Sistema Registro Elettronico");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setContentPane(panel1);
+        frame.setSize(700, 350);
+        frame.setLocationRelativeTo(null);
+        frame.setVisible(true);
+        return frame;
     }
 
     {

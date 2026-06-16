@@ -2,10 +2,13 @@ package boundary;
 
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
+import controller.GestoreServiziStudente;
+import entity.ClasseVirtuale;
+import entity.Studente;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionListener;
+import java.util.List;
 
 public class FormServiziStudente {
     private JPanel panel1;
@@ -14,16 +17,80 @@ public class FormServiziStudente {
     private JLabel labelErrore;
     private JButton buttonConferma;
 
-    public JComponent getPanel() {
-        return panel1;
+    /*
+     * JFrame "di proprieta'" del Boundary, creato in apriFormServiziStudente().
+     * Tenerlo come campo permette al listener Conferma (registrato nel
+     * costruttore) di chiuderlo prima di aprire il profilo.
+     */
+    private JFrame frame;
+
+    public FormServiziStudente() {
+
+        /*
+         * Listener Conferma: le guardie sugli input (campi vuoti, studente
+         * non trovato, lista classi vuota) stanno qui nel Boundary; il
+         * Controller assume input gia' validato (pattern professore).
+         * Su successo apre il popup FormSceltaClasse modale, e sulla scelta
+         * apre il profilo.
+         */
+        buttonConferma.addActionListener(e -> {
+
+            pulisciErrore();
+
+            String nome = fieldNome.getText().trim();
+            String cognome = fieldCognome.getText().trim();
+
+            if (nome.isEmpty() || cognome.isEmpty()) {
+                mostraErrore("Inserire nome e cognome");
+                return;
+            }
+
+            Studente studente = GestoreServiziStudente.cercaStudente(nome, cognome);
+            if (studente == null) {
+                mostraErrore("Studente non trovato");
+                return;
+            }
+
+            List<ClasseVirtuale> classi = GestoreServiziStudente.classiDi(studente);
+            if (classi.isEmpty()) {
+                mostraErrore("Nessuna classe associata a questo studente");
+                return;
+            }
+
+            apriSceltaClasse(studente, classi);
+        });
     }
 
-    public String getNomeInserito() {
-        return fieldNome.getText().trim();
+    /*
+     * Apre il popup FormSceltaClasse modale rispetto al frame di login.
+     * Su Conferma: chiude dialog + login, apre il profilo. Su Annulla:
+     * solo dispose del dialog (gestito internamente al FormSceltaClasse),
+     * il login resta a disposizione per riprovare.
+     */
+    private void apriSceltaClasse(Studente studente, List<ClasseVirtuale> classi) {
+        FormSceltaClasse formScelta = new FormSceltaClasse();
+        formScelta.setClassi(classi);
+        formScelta.addConfermaListener(e -> {
+            ClasseVirtuale scelta = formScelta.getClasseSelezionata();
+            formScelta.chiudiDialog();
+            frame.dispose();
+            new FormVisualizzazioneProfilo().apriProfilo(studente, scelta);
+        });
+        formScelta.apriDialog(frame);
     }
 
-    public String getCognomeInserito() {
-        return fieldCognome.getText().trim();
+    /*
+     * Entry point del Boundary. Crea il JFrame, lo mostra; il listener
+     * Conferma (registrato nel costruttore) prende in carico il resto.
+     */
+    public JFrame apriFormServiziStudente() {
+        frame = new JFrame("Accesso Studente");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setContentPane(panel1);
+        frame.setSize(500, 400);
+        frame.setLocationRelativeTo(null);
+        frame.setVisible(true);
+        return frame;
     }
 
     public void mostraErrore(String messaggio) {
@@ -32,10 +99,6 @@ public class FormServiziStudente {
 
     public void pulisciErrore() {
         labelErrore.setText(" ");
-    }
-
-    public void addConfermaListener(ActionListener listener) {
-        buttonConferma.addActionListener(listener);
     }
 
     {

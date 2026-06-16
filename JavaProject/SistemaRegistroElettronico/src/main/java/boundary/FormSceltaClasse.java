@@ -13,16 +13,34 @@ import java.util.List;
  * Boundary per la scelta della ClasseVirtuale dopo il login.
  *
  * Stesso pattern degli altri Boundary del progetto: JPanel bound a .form
- * (GUI Designer di IntelliJ), API a base di getPanel() + setter + listener.
+ * (GUI Designer di IntelliJ), API a base di setClassi + listener.
  *
- * Il Controller wrappa questo panel in un JDialog modale (non un JFrame:
- * e' una scelta "secondaria" sopra al login).
+ * Il Boundary possiede il proprio JDialog modale (vedi apriDialog).
+ * Modale rispetto al frame di login: e' una scelta "secondaria" sopra
+ * al login e blocca il flow finche' l'utente non sceglie o annulla.
+ * Su Annulla / X il dialog si chiude da solo; su Conferma chi ha
+ * registrato addConfermaListener decide cosa fare e chiama
+ * chiudiDialog() per chiuderlo.
  */
 public class FormSceltaClasse {
     private JPanel panel1;
     private JComboBox<ClasseVirtuale> comboClasse;
     private JButton buttonAnnulla;
     private JButton buttonConferma;
+
+    /*
+     * JDialog "di proprieta'" di questo Boundary, creato in apriDialog().
+     * Tenerlo come campo permette di chiuderlo dal listener Annulla
+     * registrato nel costruttore e dal metodo pubblico chiudiDialog().
+     */
+    private JDialog dialog;
+
+    public FormSceltaClasse() {
+        // Annulla: chiude solo il dialog; il login resta a disposizione.
+        buttonAnnulla.addActionListener(e -> {
+            if (dialog != null) dialog.dispose();
+        });
+    }
 
     public JComponent getPanel() {
         return panel1;
@@ -44,8 +62,27 @@ public class FormSceltaClasse {
         buttonConferma.addActionListener(listener);
     }
 
-    public void addAnnullaListener(ActionListener listener) {
-        buttonAnnulla.addActionListener(listener);
+    /*
+     * Apre il JDialog modale rispetto al parent. Bloccante: il chiamante
+     * resta fermo qui finche' il dialog non viene chiuso (Annulla, X o
+     * Conferma seguito da chiudiDialog).
+     */
+    public void apriDialog(JFrame parent) {
+        dialog = new JDialog(parent, "Seleziona Classe", Dialog.ModalityType.APPLICATION_MODAL);
+        dialog.setContentPane(panel1);
+        dialog.setSize(420, 240);
+        dialog.setLocationRelativeTo(parent);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        dialog.setVisible(true);
+    }
+
+    /*
+     * Chiamato dal listener Conferma esterno dopo aver letto la classe
+     * scelta, per chiudere il dialog. L'API esterna evita di esporre
+     * il JDialog stesso.
+     */
+    public void chiudiDialog() {
+        if (dialog != null) dialog.dispose();
     }
 
     {

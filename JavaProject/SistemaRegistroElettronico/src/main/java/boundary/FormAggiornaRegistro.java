@@ -2,12 +2,13 @@ package boundary;
 
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
+import controller.GestoreServiziDocente;
+import entity.ClasseVirtuale;
 import entity.Studente;
 import entity.Tipologia;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionListener;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Date;
@@ -76,6 +77,13 @@ public class FormAggiornaRegistro {
     private final JPanel panelCompito = creaFormCompito();
     private final JPanel panelValutazione = creaFormValutazione();
 
+    /*
+     * La ClasseVirtuale corrente, settata da FormGestioneRegistro tramite
+     * setClasse() all'apertura del registro. I listener Salva la leggono
+     * al momento del click per costruire l'Entity da persistere.
+     */
+    private ClasseVirtuale classe;
+
     public FormAggiornaRegistro() {
 
         /*
@@ -104,6 +112,105 @@ public class FormAggiornaRegistro {
         toggleLezione.addActionListener(e -> mostraSotto(panelLezione));
         toggleCompito.addActionListener(e -> mostraSotto(panelCompito));
         toggleValutazione.addActionListener(e -> mostraSotto(panelValutazione));
+
+        /*
+         * Listener Salva — Lezione. Guardie sull'input (argomento/descrizione
+         * vuoti) qui nel Boundary; il Controller assume input gia' validato.
+         * La data viene dallo SpinnerDateModel, sempre valida.
+         */
+        buttonSalvaLezione.addActionListener(ev -> {
+            pulisciMessaggioLezione();
+            LocalDate data = getDataLezione();
+            String argomento = getArgomentoLezione();
+            String descrizione = getDescrizioneLezione();
+            if (argomento.isEmpty()) {
+                mostraErroreLezione("Inserire l'argomento trattato");
+                return;
+            }
+            if (descrizione.isEmpty()) {
+                mostraErroreLezione("Inserire una descrizione");
+                return;
+            }
+            boolean ok = GestoreServiziDocente.registraLezione(classe, data, argomento, descrizione);
+            if (ok) {
+                mostraSuccessoLezione("Lezione registrata");
+                pulisciCampiLezione();
+            } else {
+                mostraErroreLezione("Errore durante il salvataggio");
+            }
+        });
+
+        /*
+         * Listener Salva — Compito. Guardia in piu' sulla coerenza delle
+         * due date (scadenza non puo' essere prima dell'assegnazione).
+         */
+        buttonSalvaCompito.addActionListener(ev -> {
+            pulisciMessaggioCompito();
+            String titolo = getTitoloCompito();
+            LocalDate dataAssegnazione = getDataAssegnazioneCompito();
+            String descrizione = getDescrizioneCompito();
+            LocalDate dataScadenza = getDataScadenzaCompito();
+            if (titolo.isEmpty()) {
+                mostraErroreCompito("Inserire il titolo del compito");
+                return;
+            }
+            if (descrizione.isEmpty()) {
+                mostraErroreCompito("Inserire una descrizione");
+                return;
+            }
+            if (dataScadenza.isBefore(dataAssegnazione)) {
+                mostraErroreCompito("La scadenza non puo' essere prima dell'assegnazione");
+                return;
+            }
+            boolean ok = GestoreServiziDocente.registraCompito(classe, titolo, dataAssegnazione, descrizione, dataScadenza);
+            if (ok) {
+                mostraSuccessoCompito("Compito registrato");
+                pulisciCampiCompito();
+            } else {
+                mostraErroreCompito("Errore durante il salvataggio");
+            }
+        });
+
+        /*
+         * Listener Salva — Valutazione. Guardia importante: studente puo'
+         * essere null se la combo e' vuota (classe senza iscritti). Voto
+         * vincolato dal SpinnerNumberModel 0-10 step 0.5, Tipologia da enum
+         * (mai null).
+         */
+        buttonSalvaValutazione.addActionListener(ev -> {
+            pulisciMessaggioValutazione();
+            LocalDate data = getDataValutazione();
+            double voto = getVotoValutazione();
+            String descrizione = getDescrizioneValutazione();
+            Tipologia tipologia = getTipologiaValutazione();
+            Studente studente = getStudenteValutazione();
+            if (studente == null) {
+                mostraErroreValutazione("Nessuno studente da valutare (la classe non ha iscritti)");
+                return;
+            }
+            if (descrizione.isEmpty()) {
+                mostraErroreValutazione("Inserire una descrizione");
+                return;
+            }
+            boolean ok = GestoreServiziDocente.registraValutazione(classe, data, voto, descrizione, tipologia, studente);
+            if (ok) {
+                mostraSuccessoValutazione("Valutazione registrata");
+                pulisciCampiValutazione();
+            } else {
+                mostraErroreValutazione("Errore durante il salvataggio");
+            }
+        });
+    }
+
+    /*
+     * Setta la ClasseVirtuale corrente e popola la combo Studente con
+     * gli iscritti della classe (necessario al sotto-caso Valutazione).
+     * Chiamato da FormGestioneRegistro all'apertura del registro: la
+     * classe non cambia mentre la finestra resta aperta.
+     */
+    public void setClasse(ClasseVirtuale classe) {
+        this.classe = classe;
+        setStudentiClasse(GestoreServiziDocente.cercaStudenti(classe));
     }
 
     public JComponent getPanel() {
@@ -211,10 +318,6 @@ public class FormAggiornaRegistro {
 
     public String getDescrizioneLezione() {
         return fieldDescrizioneLezione.getText().trim();
-    }
-
-    public void addSalvaLezioneListener(ActionListener listener) {
-        buttonSalvaLezione.addActionListener(listener);
     }
 
     public void mostraErroreLezione(String messaggio) {
@@ -332,10 +435,6 @@ public class FormAggiornaRegistro {
     public LocalDate getDataScadenzaCompito() {
         Date d = (Date) spinnerDataScadenzaCompito.getValue();
         return d.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-    }
-
-    public void addSalvaCompitoListener(ActionListener listener) {
-        buttonSalvaCompito.addActionListener(listener);
     }
 
     public void mostraErroreCompito(String messaggio) {
@@ -495,10 +594,6 @@ public class FormAggiornaRegistro {
         for (Studente s : studenti) {
             comboStudente.addItem(s);
         }
-    }
-
-    public void addSalvaValutazioneListener(ActionListener listener) {
-        buttonSalvaValutazione.addActionListener(listener);
     }
 
     public void mostraErroreValutazione(String messaggio) {

@@ -2,22 +2,26 @@ package boundary;
 
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
+import entity.ClasseVirtuale;
+import entity.Docente;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionListener;
 
 /*
  * Form principale del flow docente.
  *
- * In alto: bottone "Indietro" (torna alla scelta classe/docente).
+ * In alto: bottone "Indietro" (torna al login docente).
  * Sotto: due JToggleButton ("Aggiorna Registro" / "Consulta Registro")
  * raggruppati in ButtonGroup (uno sempre selezionato).
  * In basso: un pannello "contenuto" che mostra alternativamente il
- * sotto-pannello di aggiornamento o quello di consultazione.
+ * sotto-pannello di aggiornamento (FormAggiornaRegistro) o di
+ * consultazione (FormConsultaRegistro).
  *
- * I due sotto-pannelli sono per ora placeholder vuoti (i casi d'uso
- * veri verranno implementati nello step successivo).
+ * Pattern del professore (apriXxx -> JFrame, listener nel costruttore):
+ * il Boundary possiede il proprio JFrame, il back listener e' registrato
+ * qui, e apriGestioneRegistro inizializza i due sotto-form passando la
+ * ClasseVirtuale.
  */
 public class FormGestioneRegistro {
 
@@ -30,12 +34,21 @@ public class FormGestioneRegistro {
     /*
      * Sotto-pannelli del parent.
      * - formAggiorna: delegato a FormAggiornaRegistro (sub-toggle bar
-     *   Lezione/Compito/Valutazione + form di inserimento).
+     *   Lezione/Compito/Valutazione + form di inserimento, listener Salva
+     *   gestiti internamente).
      * - formConsulta: delegato a FormConsultaRegistro (sub-toggle bar
-     *   Lezioni/Compiti/Monitora + form di monitoraggio).
+     *   Lezioni/Compiti/Monitora + form di monitoraggio, listener Mostra
+     *   gestito internamente).
      */
     private final FormAggiornaRegistro formAggiorna = new FormAggiornaRegistro();
     private final FormConsultaRegistro formConsulta = new FormConsultaRegistro();
+
+    /*
+     * JFrame "di proprieta'" del Boundary, creato in apriGestioneRegistro().
+     * Tenerlo come campo permette al back listener (registrato nel
+     * costruttore) di chiuderlo al momento del click.
+     */
+    private JFrame frame;
 
     public FormGestioneRegistro() {
 
@@ -49,37 +62,41 @@ public class FormGestioneRegistro {
 
         toggleAggiorna.addActionListener(e -> mostraSotto(formAggiorna.getPanel()));
         toggleConsulta.addActionListener(e -> mostraSotto(formConsulta.getPanel()));
+
+        /*
+         * Back: chiudo questa finestra e riapro il login docente. La lambda
+         * legge il campo `frame` al momento del click — apriGestioneRegistro
+         * lo avra' gia' valorizzato.
+         */
+        buttonBack.addActionListener(e -> {
+            frame.dispose();
+            new FormServiziDocente().apriFormServiziDocente();
+        });
+    }
+
+    /*
+     * Entry point del Boundary. Setta la classe sui due sotto-form (che
+     * cosi' popolano combo studenti / Lezioni / Compiti tramite il
+     * controller static), crea il JFrame e lo mostra.
+     *
+     * Chiamato da FormServiziDocente dopo la conferma classe.
+     */
+    public JFrame apriGestioneRegistro(Docente docente, ClasseVirtuale classe) {
+
+        formAggiorna.setClasse(classe);
+        formConsulta.setClasse(classe);
+
+        frame = new JFrame("Gestione Registro — " + classe.getNome());
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setContentPane(panel1);
+        frame.setSize(600, 450);
+        frame.setLocationRelativeTo(null);
+        frame.setVisible(true);
+        return frame;
     }
 
     public JComponent getPanel() {
         return panel1;
-    }
-
-    /*
-     * Espone il sotto-form di Aggiornamento al Controller, cosi' che
-     * GestoreServiziDocente possa registrare i listener "Salva" e leggere
-     * i campi senza dover passare per metodi pass-through duplicati su
-     * questo parent.
-     */
-    public FormAggiornaRegistro getFormAggiorna() {
-        return formAggiorna;
-    }
-
-    /*
-     * Espone il sotto-form di Consultazione al Controller: stesso pattern
-     * di getFormAggiorna(). Da qui GestoreServiziDocente registra il
-     * listener "Mostra" e popola le liste Lezioni/Compiti all'apertura.
-     */
-    public FormConsultaRegistro getFormConsulta() {
-        return formConsulta;
-    }
-
-    /*
-     * Aggancia un listener al click del bottone "Indietro".
-     * Il controller lo usera' per tornare alla scelta classe/docente.
-     */
-    public void addBackListener(ActionListener listener) {
-        buttonBack.addActionListener(listener);
     }
 
     /*
