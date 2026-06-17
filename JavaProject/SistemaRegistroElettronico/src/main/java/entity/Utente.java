@@ -13,7 +13,7 @@ L'annotazione @MappedSuperclass serve proprio a definire una superclasse
 che non andrà ad essere tradotta in entità nel DB.
  */
 @MappedSuperclass
-public abstract class Utente {
+public class Utente {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -49,10 +49,6 @@ public abstract class Utente {
 
 	public String getCognome() {
 		return cognome;
-	}
-
-	public String getPassword() {
-		return password;
 	}
 
 }
