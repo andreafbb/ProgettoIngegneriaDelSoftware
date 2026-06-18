@@ -2,7 +2,6 @@ package boundary;
 
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
-import entity.ClasseVirtuale;
 
 import javax.swing.*;
 import java.awt.*;
@@ -26,7 +25,7 @@ import java.util.List;
  */
 public class FormSceltaClasse {
     private JPanel panel1;
-    private JComboBox<ClasseVirtuale> comboClasse;
+    private JComboBox<String> comboClasse;
     private JButton buttonAnnulla;
     private JButton buttonConferma;
 
@@ -53,16 +52,16 @@ public class FormSceltaClasse {
     associate a quell'Utente, tramite la ricerca filtrata dei Facade Orchestrati dai controller
      */
 
-    public void setClassi(List<ClasseVirtuale> classi) {
-        DefaultComboBoxModel<ClasseVirtuale> model = new DefaultComboBoxModel<>();
-        for (ClasseVirtuale c : classi) {
+    public void setClassi(List<String> classi) {
+        DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
+        for (String c : classi) {
             model.addElement(c);
         }
         comboClasse.setModel(model);
     }
 
-    public ClasseVirtuale getClasseSelezionata() {
-        return (ClasseVirtuale) comboClasse.getSelectedItem();
+    public String getClasseSelezionata() {
+        return (String) comboClasse.getSelectedItem();
     }
 
     public void addConfermaListener(ActionListener listener) {

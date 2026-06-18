@@ -3,16 +3,15 @@ package boundary;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import controller.GestoreServiziDocente;
-import entity.ClasseVirtuale;
-import entity.Studente;
-import entity.Tipologia;
 
 import javax.swing.*;
 import java.awt.*;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
-import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 /*
  * Sotto-form del flow docente per il caso d'uso "Aggiorna Registro".
@@ -67,10 +66,18 @@ public class FormAggiornaRegistro {
     private JSpinner spinnerDataValutazione;
     private JSpinner spinnerVotoValutazione;
     private JTextField fieldDescrizioneValutazione;
-    private JComboBox<Tipologia> comboTipologia;
-    private JComboBox<Studente> comboStudente;
+    private JComboBox<String> comboTipologia;
+    private JComboBox<String> comboStudente;
     private JButton buttonSalvaValutazione;
     private JLabel labelMessaggioValutazione;
+
+    /*
+     * Lista locale degli studenti (Map<String,String>) della classe corrente.
+     * La combo mostra solo "Nome Cognome" (String), ma per il salvataggio
+     * di una Valutazione serve la Map intera da passare al Controller:
+     * la recupero per indice dalla combo selezionata.
+     */
+    private List<Map<String, String>> studentiClasse = List.of();
 
     /*
      * Sotto-pannelli per ogni tipo di aggiornamento. Tutti e tre sono ora
@@ -81,11 +88,19 @@ public class FormAggiornaRegistro {
     private final JPanel panelValutazione = creaFormValutazione();
 
     /*
-     * La ClasseVirtuale corrente, settata da FormGestioneRegistro tramite
-     * setClasse() all'apertura del registro. I listener Salva la leggono
-     * al momento del click per costruire l'Entity da persistere.
+     * Nome della ClasseVirtuale corrente, settato da FormGestioneRegistro
+     * tramite setClasse() all'apertura del registro. I listener Salva lo
+     * leggono al momento del click per passarlo al Controller, che risale
+     * all'Entity tramite il facade.
      */
-    private ClasseVirtuale classe;
+    private String classe;
+
+    /*
+     * Formato unico per le date inviate al Controller, coerente con gli
+     * spinner (dd/MM/yyyy). Il Controller poi parsa internamente a LocalDate.
+     */
+    private static final SimpleDateFormat FMT_DATA = new SimpleDateFormat("dd/MM/yyyy");
+    private static final DateTimeFormatter FMT_PARSE = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     public FormAggiornaRegistro() {
 
@@ -110,13 +125,22 @@ public class FormAggiornaRegistro {
         toggleValutazione.addActionListener(e -> mostraSotto(panelValutazione));
 
         /*
+         * Combo Tipologia popolata con le label leggibili esposte dal
+         * Controller (non l'enum). Stessa label che adaptValutazioneClasse
+         * mette nelle Map: round-trip consistente con registraValutazione.
+         */
+        for (String t : GestoreServiziDocente.tipologieDisponibili()) {
+            comboTipologia.addItem(t);
+        }
+
+        /*
          * Listener Salva — Lezione. Guardie sull'input (argomento/descrizione
          * vuoti) qui nel Boundary; il Controller assume input gia' validato.
          * La data viene dallo SpinnerDateModel, sempre valida.
          */
         buttonSalvaLezione.addActionListener(ev -> {
             pulisciMessaggioLezione();
-            LocalDate data = getDataLezione();
+            String data = getDataLezione();
             String argomento = getArgomentoLezione();
             String descrizione = getDescrizioneLezione();
             if (argomento.isEmpty()) {
@@ -141,14 +165,16 @@ public class FormAggiornaRegistro {
 
         /*
          * Listener Salva — Compito. Guardia in piu' sulla coerenza delle
-         * due date (scadenza non puo' essere prima dell'assegnazione).
+         * due date (scadenza non puo' essere prima dell'assegnazione):
+         * confronto fatto qui parsando le String dd/MM/yyyy a LocalDate
+         * (java.time e' libreria standard, non Entity di dominio).
          */
         buttonSalvaCompito.addActionListener(ev -> {
             pulisciMessaggioCompito();
             String titolo = getTitoloCompito();
-            LocalDate dataAssegnazione = getDataAssegnazioneCompito();
+            String dataAssegnazione = getDataAssegnazioneCompito();
             String descrizione = getDescrizioneCompito();
-            LocalDate dataScadenza = getDataScadenzaCompito();
+            String dataScadenza = getDataScadenzaCompito();
             if (titolo.isEmpty()) {
                 mostraErroreCompito("Inserire il titolo del compito");
                 return;
@@ -157,7 +183,9 @@ public class FormAggiornaRegistro {
                 mostraErroreCompito("Inserire una descrizione");
                 return;
             }
-            if (dataScadenza.isBefore(dataAssegnazione)) {
+            LocalDate ass = LocalDate.parse(dataAssegnazione, FMT_PARSE);
+            LocalDate scad = LocalDate.parse(dataScadenza, FMT_PARSE);
+            if (scad.isBefore(ass)) {
                 mostraErroreCompito("La scadenza non puo' essere prima dell'assegnazione");
                 return;
             }
@@ -176,16 +204,16 @@ public class FormAggiornaRegistro {
         /*
          * Listener Salva — Valutazione. Guardia importante: studente puo'
          * essere null se la combo e' vuota (classe senza iscritti). Voto
-         * vincolato dal SpinnerNumberModel 0-10 step 0.5, Tipologia da enum
-         * (mai null).
+         * vincolato dal SpinnerNumberModel 0-10 step 0.5, Tipologia da
+         * lista del Controller (mai null).
          */
         buttonSalvaValutazione.addActionListener(ev -> {
             pulisciMessaggioValutazione();
-            LocalDate data = getDataValutazione();
+            String data = getDataValutazione();
             double voto = getVotoValutazione();
             String descrizione = getDescrizioneValutazione();
-            Tipologia tipologia = getTipologiaValutazione();
-            Studente studente = getStudenteValutazione();
+            String tipologia = getTipologiaValutazione();
+            Map<String, String> studente = getStudenteValutazione();
             if (studente == null) {
                 mostraErroreValutazione("Nessuno studente da valutare (la classe non ha iscritti)");
                 return;
@@ -208,12 +236,12 @@ public class FormAggiornaRegistro {
     }
 
     /*
-     * Setta la ClasseVirtuale corrente e popola la combo Studente con
-     * gli iscritti della classe (necessario al sotto-caso Valutazione).
+     * Setta il nome della ClasseVirtuale corrente e popola la combo Studente
+     * con gli iscritti della classe (necessario al sotto-caso Valutazione).
      * Chiamato da FormGestioneRegistro all'apertura del registro: la
      * classe non cambia mentre la finestra resta aperta.
      */
-    public void setClasse(ClasseVirtuale classe) {
+    public void setClasse(String classe) {
         this.classe = classe;
         setStudentiClasse(GestoreServiziDocente.cercaStudenti(classe));
     }
@@ -302,13 +330,13 @@ public class FormAggiornaRegistro {
     }
 
     /*
-     * Converte il valore del spinner (java.util.Date) in LocalDate via la
-     * timezone di sistema. Per un'app desktop locale e' corretto; per usi
-     * cross-zone andrebbe parametrizzato.
+     * Converte il valore del spinner (java.util.Date) nel formato
+     * "dd/MM/yyyy" che il Controller si aspetta. Niente LocalDate verso
+     * l'esterno: il Boundary scambia col Controller solo String.
      */
-    public LocalDate getDataLezione() {
+    public String getDataLezione() {
         Date d = (Date) spinnerDataLezione.getValue();
-        return d.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        return FMT_DATA.format(d);
     }
 
     public String getArgomentoLezione() {
@@ -413,20 +441,20 @@ public class FormAggiornaRegistro {
 
     /*
      * Stessa conversione di getDataLezione: prendo il Date dallo spinner
-     * e lo trasformo in LocalDate usando la timezone del sistema.
+     * e lo trasformo in String "dd/MM/yyyy" per il Controller.
      */
-    public LocalDate getDataAssegnazioneCompito() {
+    public String getDataAssegnazioneCompito() {
         Date d = (Date) spinnerDataAssegnazioneCompito.getValue();
-        return d.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        return FMT_DATA.format(d);
     }
 
     public String getDescrizioneCompito() {
         return fieldDescrizioneCompito.getText().trim();
     }
 
-    public LocalDate getDataScadenzaCompito() {
+    public String getDataScadenzaCompito() {
         Date d = (Date) spinnerDataScadenzaCompito.getValue();
-        return d.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        return FMT_DATA.format(d);
     }
 
     public void mostraErroreCompito(String messaggio) {
@@ -502,22 +530,22 @@ public class FormAggiornaRegistro {
         campi.add(fieldDescrizioneValutazione, new GridConstraints(2, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(250, 28), null, 0, false));
 
         /*
-        Tipologia: la combo la creo gia' piena con tutti i valori dell'enum
-        Tipologia. Cosi' se domani aggiungo un'altra tipologia mi appare
-        senza dover toccare la UI.
+        Tipologia: la combo la creo vuota. Verra' riempita nel costruttore
+        del Boundary con le label leggibili che il Controller espone via
+        tipologieDisponibili() — cosi' il Boundary non conosce l'enum Tipologia.
          */
         JLabel labelTipologia = new JLabel("Tipologia:");
         labelTipologia.setFont(new Font("SansSerif", Font.PLAIN, 13));
         campi.add(labelTipologia, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        comboTipologia = new JComboBox<>(Tipologia.values());
+        comboTipologia = new JComboBox<>();
         comboTipologia.setFont(new Font("SansSerif", Font.PLAIN, 13));
         campi.add(comboTipologia, new GridConstraints(3, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(180, 28), null, 0, false));
 
         /*
         Studente: la combo la creo vuota. Sara' il Controller, dentro
         apriGestioneRegistro, a riempirla con la lista degli studenti
-        della classe (setStudentiClasse). Lo Studente.toString() restituisce
-        "Nome Cognome", quindi nella combo si legge subito chi e' chi.
+        della classe (setStudentiClasse). Nella combo mostro "Nome Cognome"
+        composto dai campi della Map, quindi nella combo si legge subito chi e' chi.
          */
         JLabel labelStudente = new JLabel("Studente:");
         labelStudente.setFont(new Font("SansSerif", Font.PLAIN, 13));
@@ -538,9 +566,9 @@ public class FormAggiornaRegistro {
         return root;
     }
 
-    public LocalDate getDataValutazione() {
+    public String getDataValutazione() {
         Date d = (Date) spinnerDataValutazione.getValue();
-        return d.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        return FMT_DATA.format(d);
     }
 
     /*
@@ -556,28 +584,34 @@ public class FormAggiornaRegistro {
         return fieldDescrizioneValutazione.getText().trim();
     }
 
-    public Tipologia getTipologiaValutazione() {
-        return (Tipologia) comboTipologia.getSelectedItem();
+    public String getTipologiaValutazione() {
+        return (String) comboTipologia.getSelectedItem();
     }
 
     /*
      * Puo' essere null se la combo studenti e' vuota (es. classe senza
-     * iscritti). Il Controller gestisce questo caso con una guardia.
+     * iscritti). La Map ha "nome"/"cognome"/"email" e va passata al
+     * Controller per identificare lo studente da valutare.
      */
-    public Studente getStudenteValutazione() {
-        return (Studente) comboStudente.getSelectedItem();
+    public Map<String, String> getStudenteValutazione() {
+        int idx = comboStudente.getSelectedIndex();
+        if (idx < 0 || idx >= studentiClasse.size()) return null;
+        return studentiClasse.get(idx);
     }
 
     /*
      * Il Controller chiama questo metodo quando apre la gestione registro,
-     * passandoci la lista degli studenti della classe. Io svuoto la combo
-     * e la riempio. Se la lista e' vuota la combo resta senza opzioni
+     * passandoci la lista degli studenti della classe (Map adattate).
+     * Salvo la lista in locale perche' la combo mostra solo
+     * "Nome Cognome", ma per il salvataggio serve la Map intera.
+     * Se la lista e' vuota la combo resta senza opzioni
      * (getStudenteValutazione tornera' null) e ci pensera' la guardia.
      */
-    public void setStudentiClasse(List<Studente> studenti) {
+    public void setStudentiClasse(List<Map<String, String>> studenti) {
+        this.studentiClasse = studenti;
         comboStudente.removeAllItems();
-        for (Studente s : studenti) {
-            comboStudente.addItem(s);
+        for (Map<String, String> s : studenti) {
+            comboStudente.addItem(s.get("nome") + " " + s.get("cognome"));
         }
     }
 

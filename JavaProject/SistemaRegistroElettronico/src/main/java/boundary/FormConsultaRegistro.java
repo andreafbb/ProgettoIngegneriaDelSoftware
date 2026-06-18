@@ -3,19 +3,16 @@ package boundary;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import controller.GestoreServiziDocente;
-import entity.ClasseVirtuale;
-import entity.Compito;
-import entity.Lezione;
-import entity.Studente;
-import entity.Valutazione;
 
 import javax.swing.*;
 import java.awt.*;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 /*
  * Sotto-form del flow docente per il caso d'uso "Consulta Registro".
@@ -75,12 +72,22 @@ public class FormConsultaRegistro {
     private final JPanel panelRisultatoMonitora = new JPanel(new BorderLayout());
 
     /*
-     * La ClasseVirtuale corrente, settata da FormGestioneRegistro tramite
-     * setClasse() all'apertura del registro. Lezioni e Compiti vengono
-     * popolati subito (non dipendono dall'intervallo); il listener Mostra
-     * la legge al click per chiedere al controller le valutazioni filtrate.
+     * Nome della ClasseVirtuale corrente, settato da FormGestioneRegistro
+     * tramite setClasse() all'apertura del registro. Lezioni e Compiti
+     * vengono popolati subito (non dipendono dall'intervallo); il listener
+     * Mostra lo legge al click per passarlo al Controller (che risale
+     * all'Entity tramite il facade).
      */
-    private ClasseVirtuale classe;
+    private String classe;
+
+    /*
+     * Formato unico per le date scambiate col Controller (input via String
+     * dd/MM/yyyy). FMT_DATA formatta Date -> String; FMT_PARSE parsea
+     * String -> LocalDate solo per la guardia locale "a < da" (java.time
+     * e' libreria standard, non Entity di dominio).
+     */
+    private static final SimpleDateFormat FMT_DATA = new SimpleDateFormat("dd/MM/yyyy");
+    private static final DateTimeFormatter FMT_PARSE = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     public FormConsultaRegistro() {
 
@@ -123,25 +130,27 @@ public class FormConsultaRegistro {
          */
         buttonMostra.addActionListener(ev -> {
             pulisciMessaggioMonitora();
-            LocalDate da = getDataDa();
-            LocalDate a = getDataA();
+            String daStr = getDataDa();
+            String aStr = getDataA();
+            LocalDate da = LocalDate.parse(daStr, FMT_PARSE);
+            LocalDate a = LocalDate.parse(aStr, FMT_PARSE);
             if (a.isBefore(da)) {
                 mostraErroreMonitora("La data finale non puo' essere prima di quella iniziale");
                 return;
             }
-            List<Valutazione> valutazioni = GestoreServiziDocente.visualizzaValutazioniConIntervallo(classe, da, a);
+            List<Map<String, String>> valutazioni = GestoreServiziDocente.visualizzaValutazioniConIntervallo(classe, daStr, aStr);
             setValutazioniMonitorate(valutazioni);
             setMediaMonitorata(GestoreServiziDocente.calcolaMediaClasse(valutazioni));
         });
     }
 
     /*
-     * Setta la ClasseVirtuale corrente e popola subito Lezioni/Compiti
-     * (non dipendono dall'intervallo, sono caricati una sola volta
-     * all'apertura). Le valutazioni invece dipendono dal range scelto
-     * dal docente e vengono caricate dal listener Mostra.
+     * Setta il nome della ClasseVirtuale corrente e popola subito
+     * Lezioni/Compiti (non dipendono dall'intervallo, sono caricati una
+     * sola volta all'apertura). Le valutazioni invece dipendono dal range
+     * scelto dal docente e vengono caricate dal listener Mostra.
      */
-    public void setClasse(ClasseVirtuale classe) {
+    public void setClasse(String classe) {
         this.classe = classe;
         setLezioni(GestoreServiziDocente.visualizzaLezioni(classe));
         setCompiti(GestoreServiziDocente.visualizzaCompiti(classe));
@@ -223,34 +232,34 @@ public class FormConsultaRegistro {
         panelContenuto.repaint();
     }
 
-    private static final DateTimeFormatter FMT_DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-
     /*
     Qui i metodi che vanno a generare il layout in HTML per ogni elemento visualizzabile
-    nel Panel di Consulta registro
+    nel Panel di Consulta registro. Le Map arrivano gia' adattate dal
+    Controller (date dd/MM/yyyy, voto %.1f, tipologia leggibile),
+    il Boundary fa solo presentazione HTML.
      */
 
     /*
      * Stesso formato del profilo studente: argomento + data in bold,
      * descrizione in italic grigio sotto.
      */
-    public void setLezioni(List<Lezione> lezioni) {
+    public void setLezioni(List<Map<String, String>> lezioni) {
         modelLezioni.clear();
-        for (Lezione l : lezioni) {
+        for (Map<String, String> l : lezioni) {
             modelLezioni.addElement(
-                "<html><b>" + l.getArgomentoTrattato() + " — " + l.getData().format(FMT_DATA) + "</b><br>"
-                + "<font color='gray'><i>" + l.getDescrizione() + "</i></font></html>"
+                "<html><b>" + l.get("argomentoTrattato") + " — " + l.get("data") + "</b><br>"
+                + "<font color='gray'><i>" + l.get("descrizione") + "</i></font></html>"
             );
         }
     }
 
-    public void setCompiti(List<Compito> compiti) {
+    public void setCompiti(List<Map<String, String>> compiti) {
         modelCompiti.clear();
-        for (Compito c : compiti) {
+        for (Map<String, String> c : compiti) {
             modelCompiti.addElement(
-                "<html><b>" + c.getTitolo() + " — " + c.getDataDiAssegnazione().format(FMT_DATA)
-                + " → " + c.getDataDiScadenza().format(FMT_DATA) + "</b><br>"
-                + "<font color='gray'><i>" + c.getDescrizione() + "</i></font></html>"
+                "<html><b>" + c.get("titolo") + " — " + c.get("dataDiAssegnazione")
+                + " → " + c.get("dataDiScadenza") + "</b><br>"
+                + "<font color='gray'><i>" + c.get("descrizione") + "</i></font></html>"
             );
         }
     }
@@ -261,18 +270,17 @@ public class FormConsultaRegistro {
      * alla riga bold:
      *   "Nome Cognome — voto — tipologia — data"
      *   "descrizione (italic grigio)"
+     * Lo studenteValutato (Nome Cognome) e' gia' dentro la Map adattata.
      */
-    public void setValutazioniMonitorate(List<Valutazione> valutazioni) {
+    public void setValutazioniMonitorate(List<Map<String, String>> valutazioni) {
         modelMonitora.clear();
-        for (Valutazione v : valutazioni) {
-            Studente s = v.getStudenteValutato();
-            String tipologiaLeggibile = v.getTipologia().name().toLowerCase().replace('_', ' ');
+        for (Map<String, String> v : valutazioni) {
             modelMonitora.addElement(
-                "<html><b>" + s.getNome() + " " + s.getCognome()
-                + " — " + String.format("%.1f", v.getVoto())
-                + " — " + tipologiaLeggibile
-                + " — " + v.getData().format(FMT_DATA) + "</b><br>"
-                + "<font color='gray'><i>" + v.getDescrizione() + "</i></font></html>"
+                "<html><b>" + v.get("studenteValutato")
+                + " — " + v.get("voto")
+                + " — " + v.get("tipologia")
+                + " — " + v.get("data") + "</b><br>"
+                + "<font color='gray'><i>" + v.get("descrizione") + "</i></font></html>"
             );
         }
     }
@@ -287,20 +295,16 @@ public class FormConsultaRegistro {
     }
 
     /*
-     * Getter delle due date in formato LocalDate, coerente con gli
-     * spinner di FormAggiornaRegistro: il Controller li riceve gia'
-     * normalizzati e applica le guardie.
+     * Getter delle due date in formato String "dd/MM/yyyy", coerente con
+     * gli spinner di FormAggiornaRegistro: il Controller le riceve gia'
+     * formattate e le parsa internamente a LocalDate.
      */
-    public LocalDate getDataDa() {
-        return ((Date) spinnerDataDa.getValue()).toInstant()
-                .atZone(ZoneId.systemDefault())
-                .toLocalDate();
+    public String getDataDa() {
+        return FMT_DATA.format((Date) spinnerDataDa.getValue());
     }
 
-    public LocalDate getDataA() {
-        return ((Date) spinnerDataA.getValue()).toInstant()
-                .atZone(ZoneId.systemDefault())
-                .toLocalDate();
+    public String getDataA() {
+        return FMT_DATA.format((Date) spinnerDataA.getValue());
     }
 
     /*

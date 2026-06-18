@@ -3,12 +3,11 @@ package boundary;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import controller.GestoreServiziDocente;
-import entity.ClasseVirtuale;
-import entity.Docente;
 
 import javax.swing.*;
 import java.awt.*;
 import java.util.List;
+import java.util.Map;
 
 /*
  * Boundary del login docente. Speculare a FormServiziStudente: stessa
@@ -50,7 +49,7 @@ public class FormServiziDocente {
                 return;
             }
 
-            Docente docente = GestoreServiziDocente.cercaDocente(nome, cognome);
+            Map<String, String> docente = GestoreServiziDocente.cercaDocente(nome, cognome);
             if (docente == null) {
                 mostraErrore("Docente non trovato");
                 return;
@@ -65,7 +64,7 @@ public class FormServiziDocente {
 
              */
 
-            List<ClasseVirtuale> classi = GestoreServiziDocente.classiDi(docente);
+            List<String> classi = GestoreServiziDocente.classiDi(docente);
             if (classi.isEmpty()) {
                 mostraErrore("Nessuna classe associata a questo docente");
                 return;
@@ -79,11 +78,11 @@ public class FormServiziDocente {
      * Popup modale per la scelta classe. Su Conferma chiude dialog +
      * login e apre la gestione registro: navigazione Boundary -> Boundary.
      */
-    private void apriSceltaClasse(Docente docente, List<ClasseVirtuale> classi) {
+    private void apriSceltaClasse(Map<String, String> docente, List<String> classi) {
         FormSceltaClasse formScelta = new FormSceltaClasse();
         formScelta.setClassi(classi);
         formScelta.addConfermaListener(e -> {
-            ClasseVirtuale scelta = formScelta.getClasseSelezionata();
+            String scelta = formScelta.getClasseSelezionata();
             formScelta.chiudiDialog();
             frame.dispose();
 

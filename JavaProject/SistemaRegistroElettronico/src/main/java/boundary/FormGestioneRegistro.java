@@ -2,11 +2,10 @@ package boundary;
 
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
-import entity.ClasseVirtuale;
-import entity.Docente;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.Map;
 
 /*
  * Form principale del flow docente.
@@ -79,12 +78,12 @@ public class FormGestioneRegistro {
      *
      * Chiamato da FormServiziDocente dopo la conferma classe.
      */
-    public JFrame apriGestioneRegistro(Docente docente, ClasseVirtuale classe) {
+    public JFrame apriGestioneRegistro(Map<String, String> docente, String classe) {
 
         formAggiorna.setClasse(classe);
         formConsulta.setClasse(classe);
 
-        frame = new JFrame("Gestione Registro — " + classe.getNome());
+        frame = new JFrame("Gestione Registro — " + classe);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setContentPane(panel1);
         frame.setSize(600, 450);

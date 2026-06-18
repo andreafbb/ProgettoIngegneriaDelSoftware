@@ -35,6 +35,18 @@ public class GestoreVisualizzazione {
 	}
 
 	/*
+	 * Lookup della ClasseVirtuale per nome. Il Boundary porta avanti il
+	 * solo nome classe (String, dall'adapter) e il Controller usa questo
+	 * metodo per ri-recuperare l'Entity quando deve interrogare il registro.
+	 */
+	public ClasseVirtuale cercaClassePerNome(String nome) {
+		return gestorePersistenza.cercaPrimoPerCampi(
+				ClasseVirtuale.class,
+				Map.of("nome", nome)
+		);
+	}
+
+	/*
 	 * Ritorna le ClasseVirtuale a cui lo Studente e' iscritto, recuperate
 	 * con JOIN al DB tramite cercaClassiPerUtente (no filtro Java).
 	 */

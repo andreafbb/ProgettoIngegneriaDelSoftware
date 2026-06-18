@@ -3,12 +3,11 @@ package boundary;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import controller.GestoreServiziStudente;
-import entity.ClasseVirtuale;
-import entity.Studente;
 
 import javax.swing.*;
 import java.awt.*;
 import java.util.List;
+import java.util.Map;
 
 public class FormServiziStudente {
     private JPanel panel1;
@@ -45,7 +44,7 @@ public class FormServiziStudente {
                 return;
             }
 
-            Studente studente = GestoreServiziStudente.cercaStudente(nome, cognome);
+            Map<String, String> studente = GestoreServiziStudente.cercaStudente(nome, cognome);
             if (studente == null) {
                 mostraErrore("Studente non trovato");
                 return;
@@ -60,7 +59,7 @@ public class FormServiziStudente {
 
              */
 
-            List<ClasseVirtuale> classi = GestoreServiziStudente.classiDi(studente);
+            List<String> classi = GestoreServiziStudente.classiDi(studente);
             if (classi.isEmpty()) {
                 mostraErrore("Nessuna classe associata a questo studente");
                 return;
@@ -76,11 +75,11 @@ public class FormServiziStudente {
      * solo dispose del dialog (gestito internamente al FormSceltaClasse),
      * il login resta a disposizione per riprovare.
      */
-    private void apriSceltaClasse(Studente studente, List<ClasseVirtuale> classi) {
+    private void apriSceltaClasse(Map<String, String> studente, List<String> classi) {
         FormSceltaClasse formScelta = new FormSceltaClasse();
         formScelta.setClassi(classi);
         formScelta.addConfermaListener(e -> {
-            ClasseVirtuale scelta = formScelta.getClasseSelezionata();
+            String scelta = formScelta.getClasseSelezionata();
             formScelta.chiudiDialog();
             frame.dispose();
 

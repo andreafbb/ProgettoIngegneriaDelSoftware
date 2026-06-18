@@ -3,20 +3,15 @@ package boundary;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import controller.GestoreServiziStudente;
-import entity.ClasseVirtuale;
-import entity.Compito;
-import entity.Lezione;
-import entity.Studente;
-import entity.Valutazione;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.plaf.FontUIResource;
 import javax.swing.text.StyleContext;
 import java.awt.*;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 /*
  * Form di visualizzazione del profilo studente.
@@ -157,9 +152,9 @@ public class FormVisualizzazioneProfilo {
      * studente ha scelto la classe). Il listener Back, registrato qui
      * nel costruttore, chiude `frame` e riapre il login.
      */
-    public JFrame apriProfilo(Studente studente, ClasseVirtuale classe) {
+    public JFrame apriProfilo(Map<String, String> studente, String classe) {
 
-        labelProfilo.setText("Profilo di " + studente.getNome() + " " + studente.getCognome());
+        labelProfilo.setText("Profilo di " + studente.get("nome") + " " + studente.get("cognome"));
 
         /*
          * Tiro fuori dal controller le 3 liste + la media. La lista
@@ -168,7 +163,7 @@ public class FormVisualizzazioneProfilo {
          */
         setLezioni(GestoreServiziStudente.visualizzaLezioni(classe));
         setCompiti(GestoreServiziStudente.visualizzaCompiti(classe));
-        List<Valutazione> valutazioni = GestoreServiziStudente.visualizzaValutazioni(studente, classe);
+        List<Map<String, String>> valutazioni = GestoreServiziStudente.visualizzaValutazioni(studente, classe);
         setValutazioni(valutazioni);
         setMediaStudente(GestoreServiziStudente.calcolaMediaStudente(valutazioni));
 
@@ -195,23 +190,18 @@ public class FormVisualizzazioneProfilo {
     }
 
     /*
-     * Formato data unico per tutte le tre liste, cosi' resta coerente
-     * con gli spinner del docente (dd/MM/yyyy).
-     */
-    private static final DateTimeFormatter FMT_DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-
-    /*
      * Ogni elemento del model e' una stringa HTML: <b>argomento — data</b>
      * sopra, descrizione in italic grigio sotto. JLabel riconosce il prefisso <html>
       e la disegna su piu' righe, facendo il clear del model per poi disegnare ogni elemento
-      * della lista passata in input
+      * della lista passata in input. Le Map arrivano gia' adattate dal Controller
+      * (data formattata dd/MM/yyyy), il Boundary fa solo presentazione HTML.
      */
-    public void setLezioni(List<Lezione> lezioni) {
+    public void setLezioni(List<Map<String, String>> lezioni) {
         modelLezioni.clear();
-        for (Lezione l : lezioni) {
+        for (Map<String, String> l : lezioni) {
             modelLezioni.addElement(
-                "<html><b>" + l.getArgomentoTrattato() + " — " + l.getData().format(FMT_DATA) + "</b><br>"
-                + "<font color='gray'><i>" + l.getDescrizione() + "</i></font></html>"
+                "<html><b>" + l.get("argomentoTrattato") + " — " + l.get("data") + "</b><br>"
+                + "<font color='gray'><i>" + l.get("descrizione") + "</i></font></html>"
             );
         }
     }
@@ -221,33 +211,29 @@ public class FormVisualizzazioneProfilo {
      * per rendere chiaro che si va da assegnazione a scadenza),
      * descrizione sotto in italic grigio.
      */
-    public void setCompiti(List<Compito> compiti) {
+    public void setCompiti(List<Map<String, String>> compiti) {
         modelCompiti.clear();
-        for (Compito c : compiti) {
+        for (Map<String, String> c : compiti) {
             modelCompiti.addElement(
-                "<html><b>" + c.getTitolo() + " — " + c.getDataDiAssegnazione().format(FMT_DATA)
-                + " → " + c.getDataDiScadenza().format(FMT_DATA) + "</b><br>"
-                + "<font color='gray'><i>" + c.getDescrizione() + "</i></font></html>"
+                "<html><b>" + c.get("titolo") + " — " + c.get("dataDiAssegnazione")
+                + " → " + c.get("dataDiScadenza") + "</b><br>"
+                + "<font color='gray'><i>" + c.get("descrizione") + "</i></font></html>"
             );
         }
     }
 
     /*
-     * Per le valutazioni:
-     * - in teoria il formato %.1f non serve perché nell'inserimento dei voti è possibile
-     * inserire solo numeri ad intervalli di 0.5
-     * - tipologia: l'enum di default si stamperebbe "PROVA_SCRITTA",
-     *   che e' brutto; lo trasformo al volo in "prova scritta".
+     * Per le valutazioni: voto, tipologia leggibile ("prova scritta") e
+     * data sono gia' pronti dentro la Map adattata dal Controller. Niente
+     * formattazione %.1f / .toLowerCase qui — il Boundary fa solo HTML.
      */
-    public void setValutazioni(List<Valutazione> valutazioni) {
+    public void setValutazioni(List<Map<String, String>> valutazioni) {
         modelValutazioni.clear();
-        for (Valutazione v : valutazioni) {
-            //Trasformo la tipologia in lowerCase+ spazio al posto di _
-            String tipologiaLeggibile = v.getTipologia().name().toLowerCase().replace('_', ' ');
+        for (Map<String, String> v : valutazioni) {
             modelValutazioni.addElement(
-                "<html><b>" + String.format("%.1f", v.getVoto()) + " — " + tipologiaLeggibile
-                + " — " + v.getData().format(FMT_DATA) + "</b><br>"
-                + "<font color='gray'><i>" + v.getDescrizione() + "</i></font></html>"
+                "<html><b>" + v.get("voto") + " — " + v.get("tipologia")
+                + " — " + v.get("data") + "</b><br>"
+                + "<font color='gray'><i>" + v.get("descrizione") + "</i></font></html>"
             );
         }
     }

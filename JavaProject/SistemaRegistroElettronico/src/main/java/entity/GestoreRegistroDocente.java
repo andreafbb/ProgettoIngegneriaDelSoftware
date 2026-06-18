@@ -41,6 +41,18 @@ public class GestoreRegistroDocente {
 	}
 
 	/*
+	 * Lookup della ClasseVirtuale per nome. Il Boundary porta avanti il
+	 * solo nome classe (String, dall'adapter) e il Controller usa questo
+	 * metodo per ri-recuperare l'Entity quando deve interrogare il registro.
+	 */
+	public ClasseVirtuale cercaClassePerNome(String nome) {
+		return gestorePersistenza.cercaPrimoPerCampi(
+				ClasseVirtuale.class,
+				Map.of("nome", nome)
+		);
+	}
+
+	/*
 	Metodo utile per ricevere la lista di studenti di una classe, per poter
 	selezionare lo studente desiderato al momento dell'inserimento di una Valutazione
 	utilizzato per popolare una comboBox poi nel boundary
